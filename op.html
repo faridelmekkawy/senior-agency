@@ -125,6 +125,9 @@
     .kpi .val{font-size:22px;font-weight:900;margin-top:6px;letter-spacing:-.3px}
     .kpi .meta{color:var(--muted);font-size:12px;margin-top:6px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .smallNote{font-size:12px;color:var(--muted)}
+.badge{font-size:12px;font-weight:800}
+.formRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .input, select, textarea{
       width:100%;
       background:rgba(255,255,255,.06);
@@ -327,6 +330,7 @@
                 <div class="val" id="kpiLocked">—</div>
                 <div class="meta" id="kpiLockedMeta">—</div>
               </div>
+              <div class="meta" id="kpiPaidTrend"></div>
             </div>
 
             <div class="hr"></div>
@@ -531,6 +535,12 @@
 import {
       getStorage, ref as sRef, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
+    async function uploadToStorage(path, file){
+      const r = sRef(storage, path);
+      await uploadBytes(r, file);
+      return await getDownloadURL(r);
+    }
 
 
     // =========================
@@ -808,20 +818,55 @@ function computeKPIs(){
 }
 
 
-    function computeDeadlineStatus(){
-      const s = state.school || {};
-      const instCount = Number(s.installmentsCount || 4);
-      const deadlines = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(instCount);
-      const now = new Date();
-      const st = state.students || [];
-      const rows = deadlines.map(d=>{
-        const due = d?.dueAt?.toDate ? d.dueAt.toDate() : (d?.dueAt ? new Date(d.dueAt) : null);
-        const isPast = due ? now > due : false;
-        const missed = isPast ? st.filter(x=>Number(x.paidPct||0) < Number(d.minPct||0)).length : 0;
-        return {key:d.key, minPct:d.minPct, dueAt:d.dueAt, due, isPast, missed, total: st.length};
-      });
-      return rows;
+ function computeDeadlineStatus(){
+  const s = state.school || {};
+  const instCount = Number(s.installmentsCount || 4);
+  const deadlines = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(instCount);
+
+  const now = new Date();
+  const st = state.students || [];
+
+  const rows = deadlines.map(d=>{
+    const due = d?.dueAt?.toDate ? d.dueAt.toDate() : (d?.dueAt ? new Date(d.dueAt) : null);
+    const isPast = due ? now > due : false;
+
+    const minPct = Number(d.minPct || 0);
+    const missed = isPast ? st.filter(x => Number(x.paidPct || 0) < minPct).length : 0;
+
+    // status + note (these were missing and caused crash)
+    let status = "ok";
+    let note = "On track";
+
+    if(due && !isPast){
+      status = "due";
+      note = "Upcoming deadline";
     }
+    if(isPast && missed > 0){
+      status = "missed";
+      note = `${missed} students below required ${Math.round(minPct)}%`;
+    }
+    if(isPast && missed === 0){
+      status = "ok";
+      note = "All students met requirement";
+    }
+
+    return {
+      key: d.key,
+      minPct,
+      pctDue: Number(d.pctDue || 0),
+      dueAt: d.dueAt,
+      due,
+      isPast,
+      missed,
+      total: st.length,
+      status,
+      note
+    };
+  });
+
+  return rows;
+}
+
 
     
 function renderTimeline(){
@@ -1496,7 +1541,7 @@ function openAddProduct(){
         </div>
       </div>
     `,
-    footerHTML: `
+    footHTML: `
       <button class="btn" id="mCancel">Cancel</button>
       <button class="btn primary" id="mSave">Save product</button>
     `
@@ -1628,7 +1673,7 @@ function openEditProduct(productId){
         </div>
       </div>
     `,
-    footerHTML: `
+    footHTML: `
       <button class="btn" id="mCancel">Cancel</button>
       <button class="btn danger" id="mDelete">Delete</button>
       <button class="btn primary" id="mSave">Save</button>
@@ -1932,56 +1977,6 @@ function openSchoolSettings(){
   };
 }
 
-
-      function buildDl(){
-        const n = Number($("#mInst").value||4);
-        const step = 100/n;
-        const wrap = $("#dlWrap");
-        wrap.innerHTML = Array.from({length:n}, (_,i)=>{
-          const key = `d${i+1}`;
-          const hit = deadlines.find(x=>x.key===key) || deadlines[i] || {};
-          return `
-            <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03);padding:12px">
-              <div class="strong">${key.toUpperCase()}</div>
-              <div class="muted" style="margin-top:6px">Min ${Math.round(step*(i+1))}%</div>
-              <div class="label" style="margin-top:10px">Due date</div>
-              <input class="input" type="date" id="mDL_${key}" value="${esc(tsToInput(hit.dueAt))}">
-            </div>
-          `;
-        }).join("");
-      }
-      $("#mInst").onchange = buildDl;
-      buildDl();
-
-      $("#mCancel").onclick = closeModal;
-      $("#mSave").onclick = async ()=>{
-        const name = ($("#mName").value||"").trim() || s.name || state.schoolId;
-        const orderingOpen = $("#mOrd").value==="true";
-        const sizeUntil = $("#mSizeUntil").value;
-        const inst = Number($("#mInst").value||4);
-        const step = 100/inst;
-        const dls = [];
-        for(let i=1;i<=inst;i++){
-          const key = `d${i}`;
-          const v = ($(`#mDL_${key}`)?.value || "").trim();
-          if(!v) return toast("Missing", `Set due date for ${key.toUpperCase()}.`);
-          dls.push({key, minPct: Math.round(step*i), dueAt: Timestamp.fromDate(new Date(v+"T23:59:59"))});
-        }
-        const patch = {
-          name,
-          orderingOpen,
-          installmentsCount: inst,
-          deadlines: dls,
-          sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
-          sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
-          updatedAt: serverTimestamp()
-        };
-        await setDoc(schoolRef(state.schoolId), patch, {merge:true});
-        await addAudit("edit_school_settings", {installmentsCount:inst});
-        closeModal();
-        toast("Saved","School settings updated.");
-        await refreshAll();
-      };
     function openExtendDeadline(key){
       if(!canEditSchool()) return toast("Blocked","Only Owner/Ops can extend deadlines.");
       openModal({
@@ -2171,8 +2166,3 @@ function openSchoolSettings(){
 </body>
 </html>
 
-    async function uploadToStorage(path, file){
-      const r = sRef(storage, path);
-      await uploadBytes(r, file);
-      return await getDownloadURL(r);
-    }
