@@ -1,0 +1,1447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Senior Uniform — Student Portal</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(255,255,255,.08);
+      --ink:#f8fafc;
+      --muted:rgba(248,250,252,.72);
+      --border:rgba(255,255,255,.12);
+      --accent:#7c3aed;
+      --accent2:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --radius:18px;
+      --shadow:0 20px 60px rgba(0,0,0,.45);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Montserrat,system-ui,Segoe UI,Arial,sans-serif;
+      background:
+        radial-gradient(1200px 700px at 10% -10%, rgba(124,58,237,.35), transparent 60%),
+        radial-gradient(900px 600px at 100% 0%, rgba(34,197,94,.18), transparent 55%),
+        radial-gradient(900px 600px at 20% 110%, rgba(245,158,11,.12), transparent 55%),
+        var(--bg);
+      color:var(--ink);
+    }
+    a{color:inherit}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:12px;padding:14px 14px;border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.05));
+      border-radius:22px; box-shadow:var(--shadow);
+      position:sticky; top:12px; z-index:5;
+      backdrop-filter: blur(10px);
+    }
+    .brand{display:flex;align-items:center;gap:10px;min-width:0}
+    .logo{
+      width:38px;height:38px;border-radius:14px;
+      background:linear-gradient(135deg, rgba(124,58,237,.9), rgba(34,197,94,.75));
+      border:1px solid rgba(255,255,255,.22);
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+      flex:0 0 auto;
+    }
+    .brand h1{margin:0;font-size:14px;letter-spacing:.2px}
+    .brand .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .btn{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.06);
+      color:var(--ink);
+      padding:10px 12px;border-radius:14px;
+      font-weight:700;font-size:12px;
+      cursor:pointer;
+      transition:.15s transform, .15s background;
+    }
+    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.09)}
+    .btn.primary{background:rgba(124,58,237,.22);border-color:rgba(124,58,237,.45)}
+    .btn.good{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.40)}
+    .btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.40)}
+    .btn.warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.40)}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:14px;
+      margin-top:14px;
+    }
+    @media (max-width: 920px){
+      .grid{grid-template-columns:1fr}
+      .brand .sub{max-width:70vw}
+    }
+    .card{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.06);
+      border-radius:22px;
+      padding:14px;
+      box-shadow:0 18px 50px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+    }
+    .card h2{margin:0 0 8px 0;font-size:14px}
+    .muted{color:var(--muted);font-size:12px;line-height:1.4}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .hr{height:1px;background:var(--border);margin:12px 0}
+    .field{display:flex;flex-direction:column;gap:6px;min-width:220px;flex:1}
+    label{font-size:12px;color:var(--muted);font-weight:700}
+    .input, select, textarea{
+      width:100%;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.18);
+      color:var(--ink);
+      padding:12px 12px;
+      border-radius:14px;
+      font-family:inherit;
+      outline:none;
+    }
+    textarea{min-height:84px;resize:vertical}
+    .pill{
+      display:inline-flex;gap:8px;align-items:center;
+      padding:7px 10px;border-radius:999px;
+      font-size:12px;font-weight:800;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.06);
+    }
+    .pill.good{border-color:rgba(34,197,94,.45); background:rgba(34,197,94,.14)}
+    .pill.warn{border-color:rgba(245,158,11,.50); background:rgba(245,158,11,.12)}
+    .pill.danger{border-color:rgba(239,68,68,.50); background:rgba(239,68,68,.12)}
+    .pill.purple{border-color:rgba(124,58,237,.50); background:rgba(124,58,237,.14)}
+    .hide{display:none !important}
+
+    .products{
+      display:flex;flex-direction:column;gap:10px;margin-top:10px;
+    }
+    .prod{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.05);
+      border-radius:18px;
+      padding:12px;
+      display:grid;
+      grid-template-columns: 52px 1fr;
+      gap:10px;
+      align-items:start;
+    }
+    .pimg{
+      width:52px;height:52px;border-radius:16px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.16);
+      overflow:hidden;
+      display:flex;align-items:center;justify-content:center;
+      color:rgba(255,255,255,.6);
+      font-weight:900;
+      font-size:12px;
+    }
+    .pimg img{width:100%;height:100%;object-fit:cover;display:block}
+    .pname{font-weight:900;font-size:13px;margin:0}
+    .pmeta{font-size:12px;color:var(--muted);margin-top:3px}
+    .pline{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .pline .field{min-width:160px;flex:1}
+    .timeline{
+      display:flex;flex-direction:column;gap:10px;margin-top:10px;
+    }
+    .step{
+      display:flex;gap:10px;align-items:flex-start;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.05);
+      padding:10px;border-radius:18px;
+    }
+    .dot{
+      width:14px;height:14px;border-radius:999px;
+      border:2px solid rgba(255,255,255,.3);
+      margin-top:4px;
+      flex:0 0 auto;
+    }
+    .step.done .dot{border-color:rgba(34,197,94,.9); background:rgba(34,197,94,.35)}
+    .step.now .dot{border-color:rgba(124,58,237,.95); background:rgba(124,58,237,.35)}
+    .step.blocked .dot{border-color:rgba(239,68,68,.95); background:rgba(239,68,68,.35)}
+    .step h3{margin:0;font-size:13px}
+    .step p{margin:2px 0 0 0;font-size:12px;color:var(--muted);line-height:1.35}
+
+    .toast{
+      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+      background:rgba(0,0,0,.65);
+      border:1px solid rgba(255,255,255,.14);
+      padding:12px 14px;border-radius:16px;
+      box-shadow:0 18px 60px rgba(0,0,0,.55);
+      font-weight:800;font-size:12px;
+      z-index:9999;
+      max-width:min(92vw, 720px);
+      display:none;
+      backdrop-filter: blur(10px);
+    }
+
+    footer{
+      margin:18px 0 6px 0;
+      text-align:center;
+      color:rgba(248,250,252,.55);
+      font-size:12px;
+    }
+    footer b{color:rgba(248,250,252,.75)}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div style="min-width:0">
+          <h1>Senior Uniform — Student Portal</h1>
+          <div class="sub" id="topSub">Not signed in</div>
+        </div>
+      </div>
+      <div class="actions">
+        <span class="pill purple" id="pillStatus">Guest</span>
+        <button class="btn" id="btnSettings">Settings</button>
+        <button class="btn danger hide" id="btnLogout">Logout</button>
+      </div>
+    </div>
+
+    <!-- AUTH CARD -->
+    <div class="grid" id="authGrid">
+      <div class="card">
+        <h2>Create account</h2>
+        <div class="muted">Use your phone and a 4-digit PIN. This creates your student profile automatically (no manual setup).</div>
+        <div class="hr"></div>
+
+        <div class="row">
+          <div class="field">
+            <label>Agency ID</label>
+            <input class="input" id="suAgency" placeholder="e.g. senior_agency">
+          </div>
+          <div class="field">
+            <label>School ID</label>
+            <input class="input" id="suSchool" placeholder="e.g. school_01">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label>Full name</label>
+            <input class="input" id="suName" placeholder="Your name">
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input class="input" id="suPhone" placeholder="e.g. 01012345678" inputmode="tel">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label>4-digit PIN</label>
+            <input class="input" id="suPin" placeholder="••••" inputmode="numeric" maxlength="4">
+          </div>
+          <div class="field">
+            <label>Confirm PIN</label>
+            <input class="input" id="suPin2" placeholder="••••" inputmode="numeric" maxlength="4">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="btnSignup">Create account</button>
+          <span class="muted">Already signed up? Use the login on the right.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Log in</h2>
+        <div class="muted">Enter your phone + PIN to access your portal.</div>
+        <div class="hr"></div>
+
+        <div class="row">
+          <div class="field">
+            <label>Agency ID</label>
+            <input class="input" id="liAgency" placeholder="e.g. senior_agency">
+          </div>
+          <div class="field">
+            <label>School ID</label>
+            <input class="input" id="liSchool" placeholder="e.g. school_01">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label>Phone</label>
+            <input class="input" id="liPhone" placeholder="e.g. 01012345678" inputmode="tel">
+          </div>
+          <div class="field">
+            <label>4-digit PIN</label>
+            <input class="input" id="liPin" placeholder="••••" inputmode="numeric" maxlength="4">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn good" id="btnLogin">Log in</button>
+          <button class="btn" id="btnAutoLogin">Auto-login (if saved)</button>
+        </div>
+
+        <div class="hr"></div>
+        <div class="muted">
+          Auto-login is enabled: if you logged in once on this device, the portal will open automatically next time.
+        </div>
+      </div>
+    </div>
+
+    <!-- APP GRID -->
+    <div class="grid hide" id="appGrid">
+      <div class="card" id="cardNext">
+        <h2>Next required action</h2>
+        <div class="muted" id="nextDesc">—</div>
+        <div class="hr"></div>
+        <div class="row" id="nextActions"></div>
+      </div>
+
+      <div class="card" id="cardStatus">
+        <h2>Your status</h2>
+        <div class="row" style="gap:8px">
+          <span class="pill" id="kPaid">Paid: —</span>
+          <span class="pill" id="kOrder">Ordered: —</span>
+          <span class="pill" id="kSizes">Sizes: —</span>
+        </div>
+        <div class="hr"></div>
+        <div class="muted" id="schoolInfo">—</div>
+      </div>
+
+      <div class="card" id="cardPay">
+        <h2>Payments</h2>
+        <div class="muted">Choose your installment (based on rules) and upload a payment screenshot. Approval is required to unlock the next step.</div>
+        <div class="hr"></div>
+
+        <div class="row">
+          <div class="field">
+            <label>Payment target</label>
+            <select class="input" id="payTarget"></select>
+          </div>
+          <div class="field">
+            <label>Screenshot</label>
+            <input class="input" id="payFile" type="file" accept="image/*">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="field" style="min-width:260px;flex:2">
+            <label>Note (optional)</label>
+            <input class="input" id="payNote" placeholder="Any note for the finance team">
+          </div>
+          <button class="btn primary" id="btnSubmitPayment">Submit payment</button>
+        </div>
+
+        <div class="hr"></div>
+        <div class="muted" id="payHint">—</div>
+      </div>
+
+      <div class="card" id="cardTimeline">
+        <h2>Tracking timeline</h2>
+        <div class="muted">Live status based on your progress.</div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <div class="card" id="cardOrder">
+        <h2>Order & sizes</h2>
+        <div class="muted" id="orderHint">Select your items and sizes. After the size-lock date, editing is disabled.</div>
+        <div class="hr"></div>
+
+        <div class="products" id="products"></div>
+
+        <div class="hr"></div>
+        <div class="row">
+          <button class="btn good" id="btnSaveDraft">Save sizes</button>
+          <button class="btn primary" id="btnPlaceOrder">Place order</button>
+          <span class="muted" id="orderMeta"></span>
+        </div>
+      </div>
+
+      <div class="card" id="cardProfile">
+        <h2>Profile</h2>
+        <div class="muted">Update your name/phone (phone change will require re-signup to avoid duplicates).</div>
+        <div class="hr"></div>
+        <div class="row">
+          <div class="field">
+            <label>Full name</label>
+            <input class="input" id="pfName">
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input class="input" id="pfPhone" disabled>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="btnSaveProfile">Save profile</button>
+          <span class="muted" id="pfHint"></span>
+        </div>
+      </div>
+    </div>
+
+    <footer>Powered by <b>Luma</b></footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    /***********************
+     * Firebase imports
+     ************************/
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp,
+      collection, query, where, getDocs, addDoc, onSnapshot, orderBy, limit
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
+    /***********************
+     * Config (same as your ops/admin files)
+     ************************/
+    const firebaseConfig =  {
+      apiKey:"AIzaSyA80bAAGPuyscnTVS-zwrxE9Jp3tPiS1gM",
+      authDomain:"events-339ce.firebaseapp.com",
+      databaseURL:"https://events-339ce-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:"events-339ce",
+      storageBucket:"events-339ce.firebasestorage.app",
+      messagingSenderId:"175601544315",
+      appId:"1:175601544315:web:00c94b4affa972b3a286de"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const st = getStorage(app);
+
+    /***********************
+     * Helpers
+     ************************/
+    const $ = (q)=>document.querySelector(q);
+    const esc = (s)=>String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+    const toast = (msg)=>{
+      const t=$("#toast");
+      if(!t) return;
+      t.textContent = msg;
+      t.style.display="block";
+      clearTimeout(window.__to);
+      window.__to=setTimeout(()=>t.style.display="none", 2600);
+    };
+    const pad2 = (n)=>String(n).padStart(2,"0");
+    const ymd = (d)=>{
+      if(!d) return "";
+      const x = (d instanceof Date) ? d : new Date(d);
+      return `${x.getFullYear()}-${pad2(x.getMonth()+1)}-${pad2(x.getDate())}`;
+    };
+    const tsToDate = (t)=>{
+      if(!t) return null;
+      if(t?.toDate) return t.toDate();
+      if(typeof t === "number") return new Date(t);
+      if(typeof t === "string") return new Date(t);
+      return null;
+    };
+
+    // Consistent keys with your other apps
+    const LS = {
+      agency: "SUA_AGENCY_ID",
+      school: "SUA_SCHOOL_ID",
+      session: "SUA_STUDENT_SESSION" // JSON {agencyId, schoolId, studentId, phone, pinHash}
+    };
+
+    const DEFAULT_AGENCY = localStorage.getItem(LS.agency) || "senior_agency";
+
+    // Very small "pepper" to make hashing slightly stronger vs raw pin
+    const PEPPER = "SUA_STUDENT_PORTAL_V1";
+
+    async function sha256Base64(input){
+      const enc = new TextEncoder().encode(input);
+      const hash = await crypto.subtle.digest("SHA-256", enc);
+      const bytes = new Uint8Array(hash);
+      // base64
+      let s = "";
+      bytes.forEach(b=> s += String.fromCharCode(b));
+      return btoa(s);
+    }
+    async function pinHash(phone, pin){
+      // normalize phone so the same input always matches
+      const p = String(phone||"").replace(/\s+/g,"").trim();
+      const x = String(pin||"").trim();
+      return sha256Base64(`${PEPPER}|${p}|${x}`);
+    }
+    function isValidPin(pin){ return /^\d{4}$/.test(String(pin||"").trim()); }
+    function normPhone(p){ return String(p||"").replace(/[^\d+]/g,"").trim(); }
+
+    function setPill(text, type){
+      const el=$("#pillStatus");
+      el.textContent = text;
+      el.classList.remove("good","warn","danger","purple");
+      if(type) el.classList.add(type);
+    }
+
+    /***********************
+     * State
+     ************************/
+    const state = {
+      signedIn:false,
+      agencyId: DEFAULT_AGENCY,
+      schoolId: localStorage.getItem(LS.school) || "",
+      studentId:null,
+      phone:null,
+      student:null,
+      school:null,
+      products:[],
+      session:null,
+      unsubStudent:null,
+      unsubSchool:null,
+      unsubProducts:null,
+      unsubLastPayment:null,
+      lastPayment:null
+    };
+
+    /***********************
+     * Firestore refs
+     ************************/
+    const refAgency = (agencyId)=>doc(db, "agencies", agencyId);
+    const refSchool = (agencyId, schoolId)=>doc(db, "agencies", agencyId, "schools", schoolId);
+    const colStudents = (agencyId, schoolId)=>collection(db, "agencies", agencyId, "schools", schoolId, "students");
+    const refStudent = (agencyId, schoolId, studentId)=>doc(db, "agencies", agencyId, "schools", schoolId, "students", studentId);
+    const refLookup = (agencyId, schoolId, phone)=>doc(db, "agencies", agencyId, "schools", schoolId, "studentLookups", phone);
+    const colProducts = (agencyId, schoolId)=>collection(db, "agencies", agencyId, "schools", schoolId, "products");
+    const colPayments = (agencyId, schoolId)=>collection(db, "agencies", agencyId, "schools", schoolId, "payments");
+    const colOrders = (agencyId, schoolId)=>collection(db, "agencies", agencyId, "schools", schoolId, "orders");
+
+    /***********************
+     * Init / Auto-login
+     ************************/
+    document.addEventListener("DOMContentLoaded", async ()=>{
+      // Fill auth forms with last used agency/school
+      fillAuthDefaults();
+
+      // Anonymous auth (keeps Firestore usable even if rules allow public reads)
+      try{ await signInAnonymously(auth); }catch(e){ /* ignore */ }
+
+      // Settings button opens lightweight prompt
+      $("#btnSettings")?.addEventListener("click", ()=>{
+        openSettings();
+      });
+
+      $("#btnLogout")?.addEventListener("click", ()=>{
+        doLogout();
+      });
+
+      $("#btnSignup")?.addEventListener("click", async ()=>{
+        await doSignup();
+      });
+      $("#btnLogin")?.addEventListener("click", async ()=>{
+        await doLogin();
+      });
+      $("#btnAutoLogin")?.addEventListener("click", async ()=>{
+        await tryAutoLogin(true);
+      });
+
+      $("#btnSubmitPayment")?.addEventListener("click", async ()=>{
+        await submitPayment();
+      });
+      $("#btnSaveDraft")?.addEventListener("click", async ()=>{
+        await saveSizesDraft();
+      });
+      $("#btnPlaceOrder")?.addEventListener("click", async ()=>{
+        await placeOrder();
+      });
+      $("#btnSaveProfile")?.addEventListener("click", async ()=>{
+        await saveProfile();
+      });
+
+      // Auto-login silently (your request)
+      await tryAutoLogin(false);
+    });
+
+    function fillAuthDefaults(){
+      const agency = localStorage.getItem(LS.agency) || state.agencyId || "senior_agency";
+      const school = localStorage.getItem(LS.school) || state.schoolId || "";
+      ["#suAgency","#liAgency"].forEach(id=>{ const el=$(id); if(el) el.value = agency; });
+      ["#suSchool","#liSchool"].forEach(id=>{ const el=$(id); if(el) el.value = school; });
+    }
+
+    async function tryAutoLogin(showToastIfFail){
+      const raw = localStorage.getItem(LS.session);
+      if(!raw){
+        if(showToastIfFail) toast("No saved session on this device.");
+        return;
+      }
+      let s=null;
+      try{s=JSON.parse(raw);}catch(e){}
+      if(!s?.agencyId || !s?.schoolId || !s?.studentId || !s?.phone || !s?.pinHash){
+        if(showToastIfFail) toast("Saved session is invalid. Please login again.");
+        localStorage.removeItem(LS.session);
+        return;
+      }
+
+      // Load student and verify that stored hash still matches student record
+      try{
+        const snap = await getDoc(refStudent(s.agencyId, s.schoolId, s.studentId));
+        if(!snap.exists()){
+          localStorage.removeItem(LS.session);
+          if(showToastIfFail) toast("Account not found. Please sign up again.");
+          return;
+        }
+        const stDoc = snap.data();
+        if((stDoc.pinHash||"") !== s.pinHash){
+          localStorage.removeItem(LS.session);
+          if(showToastIfFail) toast("PIN changed. Please login again.");
+          return;
+        }
+
+        // Good session
+        await startAppSession(s.agencyId, s.schoolId, s.studentId, s.phone, s.pinHash);
+        toast("Auto-login successful.");
+      }catch(e){
+        console.error(e);
+        if(showToastIfFail) toast("Auto-login failed. Please login.");
+      }
+    }
+
+    async function startAppSession(agencyId, schoolId, studentId, phone, pinHashVal){
+      // save globals
+      state.agencyId = agencyId;
+      state.schoolId = schoolId;
+      state.studentId = studentId;
+      state.phone = phone;
+
+      // persist base ids like your other apps
+      localStorage.setItem(LS.agency, agencyId);
+      localStorage.setItem(LS.school, schoolId);
+
+      // persist session for auto-login
+      const session = { agencyId, schoolId, studentId, phone, pinHash: pinHashVal };
+      state.session = session;
+      localStorage.setItem(LS.session, JSON.stringify(session));
+
+      // switch UI
+      $("#authGrid")?.classList.add("hide");
+      $("#appGrid")?.classList.remove("hide");
+      $("#btnLogout")?.classList.remove("hide");
+      setPill("Signed in", "good");
+
+      // subscribe to school + student + products + last payment
+      subscribeAll();
+
+      // set top sub line
+      $("#topSub").textContent = `Agency: ${agencyId} • School: ${schoolId} • Phone: ${phone}`;
+    }
+
+    function stopSubs(){
+      ["unsubStudent","unsubSchool","unsubProducts","unsubLastPayment"].forEach(k=>{
+        if(typeof state[k] === "function"){ try{ state[k](); }catch(e){} }
+        state[k] = null;
+      });
+    }
+
+    function subscribeAll(){
+      stopSubs();
+
+      // school
+      state.unsubSchool = onSnapshot(refSchool(state.agencyId, state.schoolId), (snap)=>{
+        state.school = snap.exists() ? snap.data() : null;
+        renderAll();
+      });
+
+      // student
+      state.unsubStudent = onSnapshot(refStudent(state.agencyId, state.schoolId, state.studentId), (snap)=>{
+        state.student = snap.exists() ? snap.data() : null;
+        renderAll();
+      });
+
+      // products
+      state.unsubProducts = onSnapshot(colProducts(state.agencyId, state.schoolId), (snap)=>{
+        state.products = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+        renderAll();
+      });
+
+      // last payment (by this student)
+      const qPay = query(
+        colPayments(state.agencyId, state.schoolId),
+        where("studentId","==", state.studentId),
+        orderBy("createdAt","desc"),
+        limit(1)
+      );
+      state.unsubLastPayment = onSnapshot(qPay, (snap)=>{
+        state.lastPayment = snap.docs.length ? ({ id:snap.docs[0].id, ...snap.docs[0].data() }) : null;
+        renderAll();
+      });
+    }
+
+    function doLogout(){
+      stopSubs();
+      state.studentId=null; state.student=null; state.school=null; state.products=[];
+      localStorage.removeItem(LS.session);
+      $("#appGrid")?.classList.add("hide");
+      $("#authGrid")?.classList.remove("hide");
+      $("#btnLogout")?.classList.add("hide");
+      $("#topSub").textContent = "Not signed in";
+      setPill("Guest", "purple");
+      fillAuthDefaults();
+      toast("Logged out.");
+    }
+
+    function openSettings(){
+      const agency = prompt("Agency ID:", localStorage.getItem(LS.agency) || state.agencyId || "senior_agency");
+      if(agency===null) return;
+      const school = prompt("School ID:", localStorage.getItem(LS.school) || state.schoolId || "");
+      if(school===null) return;
+      localStorage.setItem(LS.agency, (agency||"").trim() || "senior_agency");
+      localStorage.setItem(LS.school, (school||"").trim());
+      fillAuthDefaults();
+      toast("Saved settings.");
+    }
+
+    /***********************
+     * Signup / Login
+     ************************/
+    async function doSignup(){
+      const agencyId = ($("#suAgency").value || "").trim() || "senior_agency";
+      const schoolId = ($("#suSchool").value || "").trim();
+      const fullName = ($("#suName").value || "").trim();
+      const phone = normPhone($("#suPhone").value || "");
+      const pin = ($("#suPin").value || "").trim();
+      const pin2 = ($("#suPin2").value || "").trim();
+
+      if(!schoolId) return toast("Please enter School ID.");
+      if(fullName.length < 3) return toast("Please enter your full name.");
+      if(phone.length < 8) return toast("Please enter a valid phone.");
+      if(!isValidPin(pin)) return toast("PIN must be 4 digits.");
+      if(pin !== pin2) return toast("PINs do not match.");
+
+      const phoneKey = phone; // used as lookup doc id
+
+      try{
+        // Ensure school exists (soft check)
+        const schSnap = await getDoc(refSchool(agencyId, schoolId));
+        if(!schSnap.exists()){
+          return toast("School not found. Please check School ID.");
+        }
+
+        // Check lookup
+        const lkRef = refLookup(agencyId, schoolId, phoneKey);
+        const lkSnap = await getDoc(lkRef);
+        if(lkSnap.exists()){
+          // Student already exists: enforce login
+          toast("This phone is already registered. Please log in.");
+          // prefill login side
+          $("#liAgency").value = agencyId;
+          $("#liSchool").value = schoolId;
+          $("#liPhone").value = phone;
+          return;
+        }
+
+        const pHash = await pinHash(phone, pin);
+
+        // Create student doc
+        const newRef = doc(colStudents(agencyId, schoolId)); // auto id
+        const studentId = newRef.id;
+
+        const studentPayload = {
+          fullName,
+          phone,
+          pinHash: pHash,
+
+          committedAt: serverTimestamp(),
+          approvedAt: null,
+
+          paidPct: 0,
+          paymentStatus: "none",
+
+          orderedAt: null,
+          sizes: {},
+
+          sizesLocked: false,
+
+          blocked: false,
+          autoBlocked: false,
+          blockReason: null,
+
+          stage: "committed",
+
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        await setDoc(newRef, studentPayload);
+
+        // Create lookup index
+        await setDoc(lkRef, {
+          studentId,
+          phone,
+          fullName,
+          createdAt: serverTimestamp()
+        });
+
+        toast("Account created.");
+        await startAppSession(agencyId, schoolId, studentId, phone, pHash);
+      }catch(e){
+        console.error(e);
+        toast("Signup failed. Check console.");
+      }
+    }
+
+    async function doLogin(){
+      const agencyId = ($("#liAgency").value || "").trim() || "senior_agency";
+      const schoolId = ($("#liSchool").value || "").trim();
+      const phone = normPhone($("#liPhone").value || "");
+      const pin = ($("#liPin").value || "").trim();
+
+      if(!schoolId) return toast("Please enter School ID.");
+      if(phone.length < 8) return toast("Please enter a valid phone.");
+      if(!isValidPin(pin)) return toast("PIN must be 4 digits.");
+
+      const phoneKey = phone;
+
+      try{
+        // lookup
+        const lkSnap = await getDoc(refLookup(agencyId, schoolId, phoneKey));
+        if(!lkSnap.exists()){
+          return toast("No account found for this phone. Please sign up.");
+        }
+        const { studentId } = lkSnap.data() || {};
+        if(!studentId) return toast("Invalid lookup. Ask ops to fix it.");
+
+        const stSnap = await getDoc(refStudent(agencyId, schoolId, studentId));
+        if(!stSnap.exists()){
+          return toast("Student record missing. Ask ops to fix it.");
+        }
+        const stDoc = stSnap.data();
+        const pHash = await pinHash(phone, pin);
+
+        if((stDoc.pinHash||"") !== pHash){
+          return toast("Wrong PIN.");
+        }
+
+        toast("Login successful.");
+        await startAppSession(agencyId, schoolId, studentId, phone, pHash);
+      }catch(e){
+        console.error(e);
+        toast("Login failed. Check console.");
+      }
+    }
+
+    /***********************
+     * Render / Logic
+     ************************/
+    function renderAll(){
+      if(!state.student || !state.school){
+        // Might be still loading
+        $("#topSub").textContent = `Agency: ${state.agencyId} • School: ${state.schoolId} • Phone: ${state.phone || ""} • Loading…`;
+        return;
+      }
+
+      // profile
+      $("#pfName").value = state.student.fullName || "";
+      $("#pfPhone").value = state.student.phone || state.phone || "";
+
+      // school info line
+      const s = state.school;
+      const orderingOpen = (s.orderingOpen !== false);
+      const sizeUntil = tsToDate(s.sizeEditsUntil || s.sizeLockDate);
+      const untilTxt = sizeUntil ? ymd(sizeUntil) : "—";
+      $("#schoolInfo").innerHTML =
+        `Ordering: <b>${orderingOpen ? "Open" : "Closed"}</b> • Size edits until: <b>${esc(untilTxt)}</b>`;
+
+      // KPIs
+      const paidPct = Number(state.student.paidPct || 0);
+      const hasOrder = !!state.student.orderedAt;
+      const sizesLocked = !!state.student.sizesLocked;
+
+      $("#kPaid").textContent = `Paid: ${paidPct}%`;
+      $("#kPaid").className = "pill " + (paidPct>=100 ? "good" : paidPct>=50 ? "warn" : "danger");
+
+      $("#kOrder").textContent = `Ordered: ${hasOrder ? "Yes" : "No"}`;
+      $("#kOrder").className = "pill " + (hasOrder ? "good" : "warn");
+
+      const sizeState = sizesLocked ? "Locked" : "Editable";
+      $("#kSizes").textContent = `Sizes: ${sizeState}`;
+      $("#kSizes").className = "pill " + (sizesLocked ? "good" : "warn");
+
+      // Payment UI targets + hints
+      renderPaymentTargets();
+
+      // Products
+      renderProductsUI();
+
+      // Next action gating
+      renderNextAction();
+
+      // Timeline
+      renderTimeline();
+    }
+
+    function deadlinesArray(){
+      const s = state.school || {};
+      const instCount = Number(s.installmentsCount || 4);
+      const defaultDeadlines = (n)=>{
+        const arr=[];
+        for(let i=1;i<=n;i++){
+          arr.push({ idx:i, minPct: Math.round((i/n)*100), dueAt:null });
+        }
+        return arr;
+      };
+      const dl = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(instCount);
+      // ensure minPct present
+      return dl.map((d,i)=>({
+        idx: d.idx ?? (i+1),
+        minPct: Number(d.minPct ?? Math.round(((i+1)/dl.length)*100)),
+        dueAt: tsToDate(d.dueAt)
+      })).sort((a,b)=>a.minPct-b.minPct);
+    }
+
+    function requiredPctNow(){
+      const now = new Date();
+      const dls = deadlinesArray();
+      // If dueAt missing, treat as not enforced yet
+      let req = 0;
+      for(const d of dls){
+        if(d.dueAt && now > d.dueAt){
+          req = Math.max(req, d.minPct);
+        }
+      }
+      return req;
+    }
+
+    function nextPaymentOptions(){
+      const paid = Number(state.student?.paidPct || 0);
+      const dls = deadlinesArray();
+
+      // options are: next milestone >= paid
+      const milestones = dls.map(d=>d.minPct).filter(x=>x>0);
+      const nextMilestones = milestones.filter(m=>m>paid).sort((a,b)=>a-b);
+
+      // Provide also a "remaining to next milestone"
+      const next = nextMilestones.length ? nextMilestones[0] : null;
+
+      const opts=[];
+      if(next){
+        opts.push({ value:String(next), label:`Pay to reach ${next}%` });
+        // If user wants to pay remaining only, it still ends up at same percent
+        opts.push({ value:String(next), label:`Pay remaining to ${next}% (recommended)` });
+      }
+      // Always allow paying full 100 if not already
+      if(paid < 100) opts.push({ value:"100", label:"Pay to reach 100% (full)" });
+      if(paid >= 100) opts.push({ value:"100", label:"Already 100% (no payment needed)" });
+
+      // De-dup by value+label
+      const seen=new Set();
+      return opts.filter(o=>{
+        const k=o.value+"|"+o.label;
+        if(seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+    }
+
+    function renderPaymentTargets(){
+      const sel = $("#payTarget");
+      if(!sel) return;
+      sel.innerHTML = "";
+
+      const opts = nextPaymentOptions();
+      for(const o of opts){
+        const op=document.createElement("option");
+        op.value=o.value;
+        op.textContent=o.label;
+        sel.appendChild(op);
+      }
+
+      const req = requiredPctNow();
+      const paid = Number(state.student?.paidPct || 0);
+      const blockedByDeadline = paid < req;
+
+      const last = state.lastPayment;
+      let lastTxt = "No recent payment submission.";
+      if(last){
+        const stt = last.status || "pending";
+        lastTxt = `Last submission: ${Number(last.pct||0)}% • Status: ${stt.toUpperCase()}`;
+        if(last.reason) lastTxt += ` • Reason: ${last.reason}`;
+      }
+
+      const hint = [];
+      if(req>0) hint.push(`Current required minimum after deadlines: ${req}%.`);
+      hint.push(`Your paid: ${paid}%.`);
+      if(blockedByDeadline) hint.push(`You are below the required minimum → you may be blocked until approved/overridden.`);
+      hint.push(lastTxt);
+
+      $("#payHint").textContent = hint.join(" ");
+    }
+
+    function productDisplayName(p){
+      return p?.name || p?.nameEn || p?.nameAr || "Product";
+    }
+
+    function renderProductsUI(){
+      const wrap = $("#products");
+      if(!wrap) return;
+
+      const s = state.school || {};
+      const orderingOpen = (s.orderingOpen !== false);
+      const sizeUntil = tsToDate(s.sizeEditsUntil || s.sizeLockDate);
+      const now = new Date();
+      const sizesLocked = !!state.student?.sizesLocked;
+      const allowEdits = !sizesLocked && (!sizeUntil || now <= sizeUntil);
+
+      // buttons enablement
+      $("#btnSaveDraft").disabled = !allowEdits;
+      $("#btnPlaceOrder").disabled = !(orderingOpen && allowEdits);
+
+      const stSizes = state.student?.sizes || {};
+
+      // If school ordering closed, still show read-only
+      wrap.innerHTML = "";
+
+      const prods = Array.isArray(state.products) ? state.products : [];
+      if(!prods.length){
+        wrap.innerHTML = `<div class="muted">No products added yet. Ask your school ops team.</div>`;
+        return;
+      }
+
+      for(const p of prods){
+        const id = p.id;
+        const sizeOptions = Array.isArray(p.sizeOptions) && p.sizeOptions.length ? p.sizeOptions : ["XS","S","M","L","XL","2XL","3XL","4XL"];
+        const printedMode = p.printedMode || "optional"; // off | optional | required
+        const imgUrl = p.imageUrl || p.imgUrl || "";
+
+        // stored selection shape: either string size or object
+        const saved = stSizes?.[id];
+        const savedSize = (typeof saved === "string") ? saved : (saved?.size || "");
+        const savedPrinted = (typeof saved === "object") ? (saved.printedName || "") : "";
+
+        const card = document.createElement("div");
+        card.className = "prod";
+        card.dataset.pid = id;
+
+        const img = document.createElement("div");
+        img.className = "pimg";
+        if(imgUrl){
+          const im=document.createElement("img");
+          im.src = imgUrl;
+          im.alt = productDisplayName(p);
+          img.appendChild(im);
+        }else{
+          img.textContent = (productDisplayName(p).slice(0,2) || "PR").toUpperCase();
+        }
+
+        const body = document.createElement("div");
+
+        const nm = document.createElement("div");
+        nm.innerHTML = `<div class="pname">${esc(productDisplayName(p))}</div>
+                        <div class="pmeta">${esc(p.category||"")} ${p.price?("• "+esc(p.price)+" EGP"):""}</div>`;
+
+        const line = document.createElement("div");
+        line.className = "pline";
+
+        // size select
+        const f1=document.createElement("div"); f1.className="field";
+        f1.innerHTML = `<label>Size</label>`;
+        const sel=document.createElement("select");
+        sel.className="input sizeSel";
+        sel.disabled = !allowEdits;
+        const op0=document.createElement("option");
+        op0.value=""; op0.textContent="Choose size";
+        sel.appendChild(op0);
+        for(const sz of sizeOptions){
+          const o=document.createElement("option");
+          o.value=sz; o.textContent=sz;
+          if(sz === savedSize) o.selected=true;
+          sel.appendChild(o);
+        }
+        f1.appendChild(sel);
+
+        // printed name
+        const f2=document.createElement("div"); f2.className="field";
+        const needPrinted = (printedMode !== "off");
+        if(needPrinted){
+          const reqStar = (printedMode==="required") ? " (required)" : " (optional)";
+          f2.innerHTML = `<label>Printed name${reqStar}</label>`;
+          const inp=document.createElement("input");
+          inp.className="input printedInp";
+          inp.placeholder = "Type the name to print";
+          inp.value = savedPrinted || "";
+          inp.disabled = !allowEdits;
+          f2.appendChild(inp);
+        }else{
+          f2.innerHTML = `<label>Printed name</label><div class="muted">Not needed for this item.</div>`;
+        }
+
+        line.appendChild(f1);
+        line.appendChild(f2);
+
+        body.appendChild(nm);
+        body.appendChild(line);
+
+        card.appendChild(img);
+        card.appendChild(body);
+
+        wrap.appendChild(card);
+      }
+
+      const hint=[];
+      hint.push(`Ordering is ${orderingOpen ? "OPEN" : "CLOSED"}.`);
+      if(sizeUntil) hint.push(`Size edits allowed until ${ymd(sizeUntil)}.`);
+      hint.push(`Current: ${allowEdits ? "You can edit sizes." : "Editing is locked."}`);
+      $("#orderMeta").textContent = hint.join(" ");
+    }
+
+    function computeGating(){
+      const st = state.student || {};
+      const school = state.school || {};
+      const now = new Date();
+
+      const paid = Number(st.paidPct || 0);
+      const required = requiredPctNow();
+
+      const blocked = !!st.blocked || !!st.autoBlocked;
+      const blockReason = st.blockReason || (st.autoBlocked ? `Missed deadline. Minimum required is ${required}%` : null);
+
+      const last = state.lastPayment;
+      const hasPendingPayment = (last && (last.status === "pending"));
+
+      const orderingOpen = (school.orderingOpen !== false);
+
+      const sizeUntil = tsToDate(school.sizeEditsUntil || school.sizeLockDate);
+      const sizesLocked = !!st.sizesLocked || (sizeUntil ? (now > sizeUntil) : false);
+      const allowEdits = !sizesLocked;
+
+      const hasOrder = !!st.orderedAt;
+
+      return { paid, required, blocked, blockReason, hasPendingPayment, orderingOpen, sizeUntil, sizesLocked, allowEdits, hasOrder };
+    }
+
+    function renderNextAction(){
+      const g = computeGating();
+      const st = state.student || {};
+      const school = state.school || {};
+
+      const nextDesc = $("#nextDesc");
+      const nextActions = $("#nextActions");
+      nextActions.innerHTML = "";
+
+      // default disable/enable cards based on gating
+      const showOnlyPayment = (g.blocked || g.paid < g.required || g.hasPendingPayment);
+
+      // If blocked
+      if(g.blocked){
+        setPill("Blocked", "danger");
+        nextDesc.textContent = g.blockReason ? `You are blocked: ${g.blockReason}` : "You are blocked until approval/override.";
+        addActionBtn("Upload payment screenshot", "primary", ()=>scrollToCard("#cardPay"));
+        toggleCards({pay:true, order:false});
+        return;
+      }
+
+      // If payment pending approval
+      if(g.hasPendingPayment){
+        setPill("Waiting approval", "warn");
+        nextDesc.textContent = "Your payment is pending approval. You cannot continue until it is approved.";
+        addActionBtn("View payments", "primary", ()=>scrollToCard("#cardPay"));
+        toggleCards({pay:true, order:false});
+        return;
+      }
+
+      // If below required minimum after deadlines
+      if(g.paid < g.required){
+        setPill("Payment required", "danger");
+        nextDesc.textContent = `Minimum required now is ${g.required}%. Your paid is ${g.paid}%. Submit payment to unlock.`;
+        addActionBtn("Pay now", "primary", ()=>scrollToCard("#cardPay"));
+        toggleCards({pay:true, order:false});
+        return;
+      }
+
+      // Payment ok; move to ordering stage
+      if(school.orderingOpen === false){
+        setPill("Ordering closed", "warn");
+        nextDesc.textContent = "Ordering is currently closed by the school ops team. Please check later.";
+        addActionBtn("View timeline", "btn", ()=>scrollToCard("#cardTimeline"));
+        toggleCards({pay:true, order:true}); // can still view
+        // but disable actions inside order (buttons already disabled)
+        return;
+      }
+
+      // Ordering open
+      if(!g.hasOrder){
+        setPill("Order required", "purple");
+        nextDesc.textContent = "Next step: choose your sizes and place your order.";
+        addActionBtn("Order now", "primary", ()=>scrollToCard("#cardOrder"));
+        toggleCards({pay:true, order:true});
+        return;
+      }
+
+      // Ordered
+      if(!g.sizesLocked){
+        setPill("Edit sizes", "purple");
+        const until = g.sizeUntil ? ymd(g.sizeUntil) : "the lock date";
+        nextDesc.textContent = `You already placed your order. You can still edit sizes until ${until}.`;
+        addActionBtn("Edit sizes", "primary", ()=>scrollToCard("#cardOrder"));
+        toggleCards({pay:true, order:true});
+        return;
+      }
+
+      // Sizes locked
+      setPill("All set", "good");
+      nextDesc.textContent = "You are fully compliant for now. Sizes are locked. Track production and delivery here.";
+      addActionBtn("View timeline", "primary", ()=>scrollToCard("#cardTimeline"));
+      toggleCards({pay:true, order:true});
+    }
+
+    function toggleCards({pay, order}){
+      // payment card always visible; ordering card visible but actions disabled by renderProductsUI
+      // Here we can also visually dim cards
+      $("#cardOrder").style.opacity = order ? "1" : ".55";
+      $("#cardOrder").style.pointerEvents = order ? "auto" : "none";
+      $("#cardPay").style.opacity = pay ? "1" : "1";
+      $("#cardPay").style.pointerEvents = "auto";
+    }
+
+    function addActionBtn(text, kind, onClick){
+      const b=document.createElement("button");
+      b.className = "btn " + (kind||"");
+      b.textContent = text;
+      b.addEventListener("click", onClick);
+      $("#nextActions").appendChild(b);
+    }
+
+    function scrollToCard(id){
+      const el = $(id);
+      if(!el) return;
+      el.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+
+    function renderTimeline(){
+      const wrap = $("#timeline");
+      if(!wrap) return;
+
+      const st = state.student || {};
+      const g = computeGating();
+
+      const steps = [
+        { key:"committed", title:"Committed", done: !!st.committedAt },
+        { key:"approved", title:"Approved", done: !!st.approvedAt || (Number(st.paidPct||0)>0) },
+        { key:"ordered", title:"Ordered", done: !!st.orderedAt },
+        { key:"sizes", title:"Sizes Locked", done: !!st.sizesLocked },
+        { key:"prod", title:"In Production", done: st.stage === "production" || !!st.inProductionAt },
+        { key:"packed", title:"Packed", done: st.stage === "packed" || !!st.packedAt },
+        { key:"delivered", title:"Delivered", done: st.stage === "delivered" || !!st.deliveredAt },
+      ];
+
+      // decide "now"
+      let nowIdx = steps.findIndex(s=>!s.done);
+      if(nowIdx === -1) nowIdx = steps.length-1;
+
+      wrap.innerHTML = "";
+      steps.forEach((s, idx)=>{
+        const div=document.createElement("div");
+        div.className = "step" + (s.done ? " done" : "") + (idx===nowIdx && !s.done ? " now" : "") + (g.blocked ? " blocked" : "");
+        const dot=document.createElement("div"); dot.className="dot";
+        const body=document.createElement("div");
+        const title=document.createElement("h3"); title.textContent = s.title;
+        const p=document.createElement("p");
+
+        if(g.blocked){
+          p.textContent = "Blocked until approval/override.";
+        }else{
+          if(s.done) p.textContent = "Completed.";
+          else{
+            // custom hints
+            if(s.key==="approved") p.textContent = "Submit payment and wait for approval.";
+            else if(s.key==="ordered") p.textContent = "Place your order when ordering opens.";
+            else if(s.key==="sizes") p.textContent = "Sizes will lock after the lock date.";
+            else p.textContent = "Pending.";
+          }
+        }
+
+        body.appendChild(title); body.appendChild(p);
+        div.appendChild(dot); div.appendChild(body);
+        wrap.appendChild(div);
+      });
+    }
+
+    /***********************
+     * Actions: Payment / Order / Profile
+     ************************/
+    async function submitPayment(){
+      const g = computeGating();
+      const pct = Number($("#payTarget").value || 0);
+      const file = $("#payFile").files?.[0] || null;
+      const note = ($("#payNote").value || "").trim();
+
+      if(!pct || pct<1) return toast("Choose a payment target.");
+      if(!file) return toast("Please upload a screenshot.");
+
+      try{
+        // Upload image
+        const path = `agencies/${state.agencyId}/schools/${state.schoolId}/payments/${state.studentId}/pay_${Date.now()}_${file.name}`;
+        const r = ref(st, path);
+        await uploadBytes(r, file, { contentType: file.type || "image/jpeg" });
+        const url = await getDownloadURL(r);
+
+        // Create payment doc (status pending)
+        await addDoc(colPayments(state.agencyId, state.schoolId), {
+          studentId: state.studentId,
+          studentName: state.student?.fullName || "",
+          phone: state.phone || state.student?.phone || "",
+          pct,
+          screenshotUrl: url,
+          note: note || null,
+          status: "pending",
+          createdAt: serverTimestamp()
+        });
+
+        // Block student until approval (matches your ops behavior expectation)
+        await updateDoc(refStudent(state.agencyId, state.schoolId, state.studentId), {
+          blocked: true,
+          blockReason: "Payment pending approval",
+          paymentStatus: "pending",
+          updatedAt: serverTimestamp()
+        });
+
+        $("#payFile").value = "";
+        $("#payNote").value = "";
+        toast("Payment submitted (pending approval).");
+        scrollToCard("#cardNext");
+      }catch(e){
+        console.error(e);
+        toast("Payment submit failed. Check console.");
+      }
+    }
+
+    function collectSizesFromUI(){
+      const out = {};
+      const wrap = $("#products");
+      if(!wrap) return out;
+
+      const cards = [...wrap.querySelectorAll(".prod")];
+      for(const c of cards){
+        const pid = c.dataset.pid;
+        const sizeSel = c.querySelector(".sizeSel");
+        const printedInp = c.querySelector(".printedInp");
+        const size = (sizeSel?.value || "").trim();
+        const printedName = (printedInp?.value || "").trim();
+
+        if(size){
+          // store object if printed input exists, else store just size string
+          if(printedInp){
+            out[pid] = { size, printedName: printedName || null };
+          }else{
+            out[pid] = size;
+          }
+        }
+      }
+      return out;
+    }
+
+    function validateOrderSelections(sizesMap){
+      const prods = Array.isArray(state.products) ? state.products : [];
+      for(const p of prods){
+        const pid = p.id;
+        const printedMode = p.printedMode || "optional";
+        const sel = sizesMap[pid];
+
+        // If student chose this product, enforce required printed name
+        if(sel){
+          const size = (typeof sel === "string") ? sel : (sel.size || "");
+          const printedName = (typeof sel === "object") ? (sel.printedName || "") : "";
+          if(!size) return `Missing size for ${productDisplayName(p)}.`;
+          if(printedMode === "required"){
+            if(!printedName || String(printedName).trim().length < 2){
+              return `Printed name is required for ${productDisplayName(p)}.`;
+            }
+          }
+        }
+      }
+      // require at least 1 selected
+      if(Object.keys(sizesMap).length === 0) return "Please select at least one item and size.";
+      return null;
+    }
+
+    async function saveSizesDraft(){
+      const g = computeGating();
+      if(!g.allowEdits) return toast("Size editing is locked.");
+
+      const sizesMap = collectSizesFromUI();
+      const err = validateOrderSelections(sizesMap);
+      if(err) return toast(err);
+
+      try{
+        await updateDoc(refStudent(state.agencyId, state.schoolId, state.studentId), {
+          sizes: sizesMap,
+          updatedAt: serverTimestamp()
+        });
+        toast("Sizes saved.");
+      }catch(e){
+        console.error(e);
+        toast("Failed to save sizes.");
+      }
+    }
+
+    async function placeOrder(){
+      const g = computeGating();
+      const school = state.school || {};
+      if(g.blocked) return toast("You are blocked.");
+      if(state.lastPayment && state.lastPayment.status === "pending") return toast("Wait for payment approval.");
+      if(school.orderingOpen === false) return toast("Ordering is closed.");
+      if(!g.allowEdits) return toast("Size editing is locked.");
+
+      const sizesMap = collectSizesFromUI();
+      const err = validateOrderSelections(sizesMap);
+      if(err) return toast(err);
+
+      try{
+        // Save sizes to student
+        await updateDoc(refStudent(state.agencyId, state.schoolId, state.studentId), {
+          sizes: sizesMap,
+          updatedAt: serverTimestamp()
+        });
+
+        // Create order doc
+        const orderPayload = {
+          studentId: state.studentId,
+          studentName: state.student?.fullName || "",
+          phone: state.phone || state.student?.phone || "",
+          sizes: sizesMap,
+          status: "placed",
+          createdAt: serverTimestamp()
+        };
+        await addDoc(colOrders(state.agencyId, state.schoolId), orderPayload);
+
+        // Mark ordered on student
+        await updateDoc(refStudent(state.agencyId, state.schoolId, state.studentId), {
+          orderedAt: serverTimestamp(),
+          stage: "ordered",
+          updatedAt: serverTimestamp()
+        });
+
+        toast("Order placed.");
+        scrollToCard("#cardNext");
+      }catch(e){
+        console.error(e);
+        toast("Failed to place order.");
+      }
+    }
+
+    async function saveProfile(){
+      const name = ($("#pfName").value || "").trim();
+      if(name.length < 3) return toast("Enter a valid name.");
+      try{
+        await updateDoc(refStudent(state.agencyId, state.schoolId, state.studentId), {
+          fullName: name,
+          updatedAt: serverTimestamp()
+        });
+        toast("Profile saved.");
+      }catch(e){
+        console.error(e);
+        toast("Failed to save profile.");
+      }
+    }
+  </script>
+</body>
+</html>
