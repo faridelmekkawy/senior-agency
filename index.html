@@ -568,7 +568,21 @@
               </select>
               <div class="smallNote" style="margin-top:6px">When ON, the first logged-in user can self-create an Owner staff doc if missing.</div>
             </div>
+          
+          <div class="hr"></div>
+
+          <div class="formRow">
+            <div>
+              <label class="smallNote">Agency logo (used everywhere)</label>
+              <input class="input" id="logoFile" type="file" accept="image/*"/>
+              <div class="smallNote" style="margin-top:6px">Current: <span id="logoHint">—</span></div>
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:flex-end;gap:10px">
+              <button class="btn" id="btnUploadLogo">Upload logo</button>
+              <button class="btn danger" id="btnClearLogo">Clear logo</button>
+            </div>
           </div>
+</div>
 
           <div class="formActions">
             <button class="btn primary" id="btnSaveAgencySettings">Save settings</button>
@@ -701,7 +715,8 @@ agencies/{agencyId}/audit/{autoId}
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import {
       getAuth, onAuthStateChanged,
-      signInWithEmailAndPassword, sendPasswordResetEmail, signOut
+      signInWithEmailAndPassword, sendPasswordResetEmail, signOut,
+      createUserWithEmailAndPassword, updateProfile
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, setDoc, updateDoc, addDoc,
@@ -709,12 +724,22 @@ agencies/{agencyId}/audit/{autoId}
       serverTimestamp, Timestamp
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+    import {
+      getStorage, ref as sRef, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
     // =========================
     // 3) App init
     // =========================
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Secondary app instance (so Owner can create staff logins without logging out)
+    const app2 = initializeApp(firebaseConfig, "secondary");
+    const auth2 = getAuth(app2);
+    const storage2 = getStorage(app2);
 
     // =========================
     // 4) UI helpers
@@ -751,7 +776,21 @@ agencies/{agencyId}/audit/{autoId}
     function esc(s){
       return String(s ?? "").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
     }
-    function openModal({title, sub, bodyHTML, footerHTML}){
+    
+    function applyLogo(url){
+      const logos = Array.from(document.querySelectorAll(".logo"));
+      logos.forEach(el=>{
+        if(url){
+          el.style.backgroundImage = `url(${url})`;
+          el.style.backgroundSize = "cover";
+          el.style.backgroundPosition = "center";
+          el.style.backgroundRepeat = "no-repeat";
+        }else{
+          el.style.backgroundImage = "";
+        }
+      });
+    }
+function openModal({title, sub, bodyHTML, footerHTML}){
       $("#modalTitle").textContent = title || "—";
       $("#modalSub").textContent = sub || "";
       $("#modalBody").innerHTML = bodyHTML || "";
@@ -874,6 +913,7 @@ agencies/{agencyId}/audit/{autoId}
       if(!snap.exists()){
         await setDoc(ref, {
           name: "Senior Uniform Agency",
+          logoUrl: "",
           createdAt: serverTimestamp(),
           bootstrapOwner: false,
           snapshotsEnabled: true
@@ -884,9 +924,11 @@ agencies/{agencyId}/audit/{autoId}
       $("#setAgencyName").value = state.agency?.name || "Senior Uniform Agency";
       $("#setBootstrap").value = state.agency?.bootstrapOwner ? "on" : "off";
       $("#pillAgencyId").textContent = `agency: ${state.agencyId}`;
-    }
-
-    async function loadMe(uid){
+      applyLogo(state.agency?.logoUrl || "");
+      // show logo status in settings
+      const logoHint = document.getElementById("logoHint");
+      if(logoHint) logoHint.textContent = state.agency?.logoUrl ? "Logo set" : "No logo yet";
+    }async function loadMe(uid){
       const ref = staffRef(uid);
       const snap = await getDoc(ref);
 
@@ -927,10 +969,15 @@ agencies/{agencyId}/audit/{autoId}
     }
 
     async function loadSchools(){
-      const qy = query(schoolsCol(), orderBy("createdAt","desc"));
-      const snap = await getDocs(qy);
+      // Don't depend on createdAt for ordering (some docs may be missing it during early setup).
+      const snap = await getDocs(schoolsCol());
       const all = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      state.schools = all.filter(s=>hasSchoolAccess(s.id));
+      const sorted = all.sort((a,b)=>{
+        const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      state.schools = sorted.filter(s=>hasSchoolAccess(s.id));
       $("#chipSchools").textContent = `${state.schools.length} Schools`;
       renderSchoolsTables();
     }
@@ -1618,10 +1665,11 @@ agencies/{agencyId}/audit/{autoId}
     // =========================
     // 12) Modals: Create / Edit School
     // =========================
+    
     function openCreateSchool(){
       openModal({
         title:"Create school",
-        sub:"Creates an isolated workspace with default 4×25% deadlines (you can edit anytime).",
+        sub:"Each school configures its own installments + deadlines + size-lock date.",
         bodyHTML: `
           <div class="formRow">
             <div>
@@ -1639,22 +1687,11 @@ agencies/{agencyId}/audit/{autoId}
 
           <div class="formRow3">
             <div>
-              <label class="smallNote">Deadline #1 due</label>
-              <input class="input" id="mD1" type="date"/>
-            </div>
-            <div>
-              <label class="smallNote">Deadline #2 due</label>
-              <input class="input" id="mD2" type="date"/>
-            </div>
-            <div>
-              <label class="smallNote">Deadline #3 due</label>
-              <input class="input" id="mD3" type="date"/>
-            </div>
-          </div>
-          <div class="formRow3" style="margin-top:10px">
-            <div>
-              <label class="smallNote">Deadline #4 due</label>
-              <input class="input" id="mD4" type="date"/>
+              <label class="smallNote">Installments count</label>
+              <select class="input" id="mInstCount">
+                ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===4?"selected":""}>${n} installments</option>`).join("")}
+              </select>
+              <div class="smallNote" style="margin-top:6px">Min % schedule auto-calculates (cumulative): 100% ÷ count.</div>
             </div>
             <div>
               <label class="smallNote">Size edits allowed until</label>
@@ -1669,7 +1706,44 @@ agencies/{agencyId}/audit/{autoId}
             </div>
           </div>
 
-          <div class="smallNote" style="margin-top:10px">Min payment schedule is locked to: 25% → 50% → 75% → 100% (per blueprint).</div>
+          <div class="hr"></div>
+
+          <div class="smallNote" style="margin-bottom:8px">Deadlines (due dates) per installment:</div>
+
+          <div class="formRow3">
+            <div class="dl" data-i="1">
+              <label class="smallNote">D1 due (min %)</label>
+              <input class="input" id="mD1" type="date"/>
+              <div class="smallNote" id="mP1">min 25%</div>
+            </div>
+            <div class="dl" data-i="2">
+              <label class="smallNote">D2 due (min %)</label>
+              <input class="input" id="mD2" type="date"/>
+              <div class="smallNote" id="mP2">min 50%</div>
+            </div>
+            <div class="dl" data-i="3">
+              <label class="smallNote">D3 due (min %)</label>
+              <input class="input" id="mD3" type="date"/>
+              <div class="smallNote" id="mP3">min 75%</div>
+            </div>
+          </div>
+          <div class="formRow3" style="margin-top:10px">
+            <div class="dl" data-i="4">
+              <label class="smallNote">D4 due (min %)</label>
+              <input class="input" id="mD4" type="date"/>
+              <div class="smallNote" id="mP4">min 100%</div>
+            </div>
+            <div class="dl" data-i="5">
+              <label class="smallNote">D5 due (min %)</label>
+              <input class="input" id="mD5" type="date"/>
+              <div class="smallNote" id="mP5">min —</div>
+            </div>
+            <div class="dl" data-i="6">
+              <label class="smallNote">D6 due (min %)</label>
+              <input class="input" id="mD6" type="date"/>
+              <div class="smallNote" id="mP6">min —</div>
+            </div>
+          </div>
         `,
         footerHTML: `
           <button class="btn" id="mCancel">Cancel</button>
@@ -1679,15 +1753,34 @@ agencies/{agencyId}/audit/{autoId}
 
       $("#mCancel").onclick = closeModal;
 
-      // defaults: next 4 Fridays
       const base = new Date();
       const toDateInput = (d)=> `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
       const addDays = (n)=> new Date(base.getTime()+n*24*3600*1000);
+
+      // defaults
+      $("#mSizeUntil").value = toDateInput(addDays(24));
       $("#mD1").value = toDateInput(addDays(7));
       $("#mD2").value = toDateInput(addDays(14));
       $("#mD3").value = toDateInput(addDays(21));
       $("#mD4").value = toDateInput(addDays(28));
-      $("#mSizeUntil").value = toDateInput(addDays(24));
+      $("#mD5").value = toDateInput(addDays(35));
+      $("#mD6").value = toDateInput(addDays(42));
+
+      function updateDlUI(){
+        const n = Number($("#mInstCount").value||4);
+        const step = 100 / n;
+        for(let i=1;i<=6;i++){
+          const wrap = document.querySelector(`.dl[data-i="${i}"]`);
+          if(wrap) wrap.style.display = i<=n ? "block" : "none";
+          const p = document.getElementById(`mP${i}`);
+          if(p){
+            const minPct = Math.round(step*i);
+            p.textContent = i<=n ? `min ${minPct}%` : "—";
+          }
+        }
+      }
+      $("#mInstCount").onchange = updateDlUI;
+      updateDlUI();
 
       $("#mCreate").onclick = async ()=>{
         const name = $("#mSchoolName").value.trim() || "Untitled school";
@@ -1695,33 +1788,46 @@ agencies/{agencyId}/audit/{autoId}
         if(!id){
           id = name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,40) || ("school_"+Math.random().toString(16).slice(2,8));
         }
-        const d1 = $("#mD1").value, d2=$("#mD2").value, d3=$("#mD3").value, d4=$("#mD4").value;
-        const sizeUntil = $("#mSizeUntil").value;
-        const orderingOpen = $("#mOrdOpen").value==="true";
-        if(!d1||!d2||!d3||!d4) return toast("Missing", "Set all 4 deadlines.");
 
-        const deadlines = [
-          {key:"d1", minPct:25, dueAt: Timestamp.fromDate(new Date(d1+"T23:59:59"))},
-          {key:"d2", minPct:50, dueAt: Timestamp.fromDate(new Date(d2+"T23:59:59"))},
-          {key:"d3", minPct:75, dueAt: Timestamp.fromDate(new Date(d3+"T23:59:59"))},
-          {key:"d4", minPct:100, dueAt: Timestamp.fromDate(new Date(d4+"T23:59:59"))},
-        ];
+        const instCount = Number($("#mInstCount").value||4);
+        const orderingOpen = $("#mOrdOpen").value==="true";
+        const sizeUntil = $("#mSizeUntil").value;
+
+        const dates = [];
+        for(let i=1;i<=instCount;i++){
+          const v = document.getElementById(`mD${i}`)?.value;
+          if(!v) return toast("Missing", `Set due date for D${i}.`);
+          dates.push(v);
+        }
+
+        const step = 100 / instCount;
+        const deadlines = [];
+        for(let i=1;i<=instCount;i++){
+          deadlines.push({
+            key: `d${i}`,
+            minPct: Math.round(step*i),
+            dueAt: Timestamp.fromDate(new Date(dates[i-1] + "T23:59:59"))
+          });
+        }
+
+        const percentSchedule = Array.from({length:instCount}, ()=> Math.round(100/instCount));
 
         const payload = {
           name,
           active:true,
           createdAt: serverTimestamp(),
           orderingOpen,
+          installmentsCount: instCount,
+          percentSchedule,
+          deadlines,
           sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
           sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
-          percentSchedule: [25,25,25,25],
-          deadlines,
           updatedAt: serverTimestamp()
         };
 
         try{
           await setDoc(schoolRef(id), payload, {merge:true});
-          await addAudit("create_school", {schoolId:id, name});
+          await addAudit("create_school", {schoolId:id, name, installmentsCount:instCount});
           toast("Created", `School ${id} created.`);
           closeModal();
           await refreshAll();
@@ -1734,26 +1840,29 @@ agencies/{agencyId}/audit/{autoId}
     function openEditSchool(schoolId){
       const s = state.schools.find(x=>x.id===schoolId);
       if(!s) return;
-      const deadlines = Array.isArray(s.deadlines) ? s.deadlines : defaultDeadlines();
 
-      const toDateInput = (ts)=>{
+      const existingDeadlines = Array.isArray(s.deadlines) ? s.deadlines : defaultDeadlines();
+      const instCount0 = Number(s.installmentsCount || existingDeadlines.length || 4);
+
+      const tsToInput = (ts)=>{
         if(!ts) return "";
         const d = ts.toDate ? ts.toDate() : new Date(ts);
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
       };
 
       openModal({
-        title:`Edit school — ${s.name || s.id}`,
-        sub:"Update deadlines, ordering window, and size-lock rules.",
+        title:`Edit school — ${esc(s.name || s.id)}`,
+        sub:"Configure installments + deadlines per school. Changes affect student gating + ops dashboards.",
         bodyHTML: `
           <div class="formRow">
             <div>
               <label class="smallNote">School name</label>
-              <input class="input" id="mName" value="${esc(s.name||"")}"/>
+              <input class="input" id="mSchoolName" value="${esc(s.name || "")}" placeholder="School name"/>
             </div>
             <div>
               <label class="smallNote">School ID</label>
-              <input class="input" value="${esc(s.id)}" disabled/>
+              <input class="input" id="mSchoolId" value="${esc(s.id)}" disabled/>
+              <div class="smallNote" style="margin-top:6px">ID cannot change.</div>
             </div>
           </div>
 
@@ -1761,425 +1870,157 @@ agencies/{agencyId}/audit/{autoId}
 
           <div class="formRow3">
             <div>
-              <label class="smallNote">D1 (25%)</label>
-              <input class="input" id="mD1" type="date"/>
-            </div>
-            <div>
-              <label class="smallNote">D2 (50%)</label>
-              <input class="input" id="mD2" type="date"/>
-            </div>
-            <div>
-              <label class="smallNote">D3 (75%)</label>
-              <input class="input" id="mD3" type="date"/>
-            </div>
-          </div>
-          <div class="formRow3" style="margin-top:10px">
-            <div>
-              <label class="smallNote">D4 (100%)</label>
-              <input class="input" id="mD4" type="date"/>
-            </div>
-            <div>
-              <label class="smallNote">Size edits allowed until</label>
-              <input class="input" id="mSizeUntil" type="date"/>
+              <label class="smallNote">Installments count</label>
+              <select class="input" id="mInstCount">
+                ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===instCount0?"selected":""}>${n} installments</option>`).join("")}
+              </select>
             </div>
             <div>
               <label class="smallNote">Ordering window</label>
               <select class="input" id="mOrdOpen">
-                <option value="true">Open</option>
-                <option value="false">Closed</option>
+                <option value="true" ${s.orderingOpen!==false?"selected":""}>Open</option>
+                <option value="false" ${s.orderingOpen===false?"selected":""}>Closed</option>
               </select>
             </div>
+            <div>
+              <label class="smallNote">Size edits allowed until</label>
+              <input class="input" id="mSizeUntil" type="date" value="${tsToInput(s.sizeEditsUntil || s.sizeLockDate)}"/>
+            </div>
           </div>
+
           <div class="hr"></div>
-          <div class="smallNote">Note: Stage enforcement happens inside <b>school-ops.html</b>. This page sets the rules and dates.</div>
-        `,
-        footerHTML: `
-          <button class="btn" id="mCancel">Cancel</button>
-          <button class="btn primary" id="mSave">Save</button>
-        `
-      });
 
-      $("#mD1").value = toDateInput(deadlines.find(d=>d.key==="d1")?.dueAt);
-      $("#mD2").value = toDateInput(deadlines.find(d=>d.key==="d2")?.dueAt);
-      $("#mD3").value = toDateInput(deadlines.find(d=>d.key==="d3")?.dueAt);
-      $("#mD4").value = toDateInput(deadlines.find(d=>d.key==="d4")?.dueAt);
+          <div class="smallNote" style="margin-bottom:8px">Deadlines (due dates) per installment:</div>
 
-      $("#mSizeUntil").value = toDateInput(s.sizeEditsUntil || s.sizeLockDate);
-      $("#mOrdOpen").value = String(!!s.orderingOpen);
+          <div class="formRow3">
+            <div class="dl" data-i="1">
+              <label class="smallNote">D1 due (min %)</label>
+              <input class="input" id="mD1" type="date"/>
+              <div class="smallNote" id="mP1">—</div>
+            </div>
+            <div class="dl" data-i="2">
+              <label class="smallNote">D2 due (min %)</label>
+              <input class="input" id="mD2" type="date"/>
+              <div class="smallNote" id="mP2">—</div>
+            </div>
+            <div class="dl" data-i="3">
+              <label class="smallNote">D3 due (min %)</label>
+              <input class="input" id="mD3" type="date"/>
+              <div class="smallNote" id="mP3">—</div>
+            </div>
+          </div>
+          <div class="formRow3" style="margin-top:10px">
+            <div class="dl" data-i="4">
+              <label class="smallNote">D4 due (min %)</label>
+              <input class="input" id="mD4" type="date"/>
+              <div class="smallNote" id="mP4">—</div>
+            </div>
+            <div class="dl" data-i="5">
+              <label class="smallNote">D5 due (min %)</label>
+              <input class="input" id="mD5" type="date"/>
+              <div class="smallNote" id="mP5">—</div>
+            </div>
+            <div class="dl" data-i="6">
+              <label class="smallNote">D6 due (min %)</label>
+              <input class="input" id="mD6" type="date"/>
+              <div class="smallNote" id="mP6">—</div>
+            </div>
+          </div>
 
-      $("#mCancel").onclick = closeModal;
-      $("#mSave").onclick = async ()=>{
-        const name = $("#mName").value.trim() || s.name || "Untitled school";
-        const d1=$("#mD1").value, d2=$("#mD2").value, d3=$("#mD3").value, d4=$("#mD4").value;
-        const sizeUntil=$("#mSizeUntil").value;
-        const orderingOpen = $("#mOrdOpen").value==="true";
-        if(!d1||!d2||!d3||!d4) return toast("Missing", "Set all 4 deadlines.");
+          <div class="hr"></div>
 
-        const updatedDeadlines = [
-          {key:"d1", minPct:25, dueAt: Timestamp.fromDate(new Date(d1+"T23:59:59"))},
-          {key:"d2", minPct:50, dueAt: Timestamp.fromDate(new Date(d2+"T23:59:59"))},
-          {key:"d3", minPct:75, dueAt: Timestamp.fromDate(new Date(d3+"T23:59:59"))},
-          {key:"d4", minPct:100, dueAt: Timestamp.fromDate(new Date(d4+"T23:59:59"))},
-        ];
-
-        const patch = {
-          name,
-          orderingOpen,
-          deadlines: updatedDeadlines,
-          sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
-          sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
-          updatedAt: serverTimestamp()
-        };
-
-        await updateDoc(schoolRef(s.id), patch);
-        await addAudit("edit_school", {schoolId:s.id, patch:{name, orderingOpen, sizeUntil}});
-        toast("Saved", "School updated.");
-        closeModal();
-        await refreshAll();
-      };
-    }
-
-    $("#btnOpenCreateSchool").addEventListener("click", openCreateSchool);
-    $("#btnOpenCreateSchool2").addEventListener("click", openCreateSchool);
-
-    // =========================
-    // 13) Staff modals
-    // =========================
-    function openInviteStaff(){
-      const schools = state.schools.map(s=>({id:s.id, name:s.name||s.id}));
-      openModal({
-        title:"Invite / Add staff",
-        sub:"Create or update a staff profile (Auth user must exist separately).",
-        bodyHTML: `
           <div class="formRow">
             <div>
-              <label class="smallNote">User UID (Auth)</label>
-              <input class="input" id="mUid" placeholder="Paste user's Firebase Auth uid"/>
-              <div class="smallNote" style="margin-top:6px">This page does not create Auth users (HTML-only). Create users in Firebase Auth (Email/Password), then paste uid here.</div>
-            </div>
-            <div>
-              <label class="smallNote">Full name</label>
-              <input class="input" id="mFullName" placeholder="e.g. Sara Hassan"/>
-            </div>
-          </div>
-          <div class="formRow" style="margin-top:10px">
-            <div>
-              <label class="smallNote">Email</label>
-              <input class="input" id="mEmail" placeholder="name@agency.com"/>
-            </div>
-            <div>
-              <label class="smallNote">Role</label>
-              <select class="input" id="mRole">
-                ${ROLES.map(r=>`<option value="${esc(r.key)}">${esc(r.name)}</option>`).join("")}
+              <label class="smallNote">Active</label>
+              <select class="input" id="mActive">
+                <option value="true" ${s.active!==false?"selected":""}>Active</option>
+                <option value="false" ${s.active===false?"selected":""}>Inactive</option>
               </select>
             </div>
+            <div class="smallNote" style="align-self:end">Tip: if school “doesn’t appear”, check agencyId in Settings and ensure your staff has access to that school.</div>
           </div>
-
-          <div class="hr"></div>
-
-          <label class="smallNote">School access</label>
-          <div class="smallNote" style="margin:6px 0 10px">Choose specific schools, or select “All schools”.</div>
-
-          <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <label class="tag" style="cursor:pointer">
-                <input type="checkbox" id="mAllSchools"/> <span>All schools</span>
-              </label>
-              ${schools.map(s=>`
-                <label class="tag" style="cursor:pointer">
-                  <input type="checkbox" class="mSchool" value="${esc(s.id)}"/> <span>${esc(s.name)}</span>
-                </label>
-              `).join("")}
-            </div>
-          </div>
-
-          <div class="smallNote" style="margin-top:10px">Active staff only. Disable instead of deleting.</div>
         `,
         footerHTML: `
           <button class="btn" id="mCancel">Cancel</button>
-          <button class="btn primary" id="mSave">Save</button>
+          <button class="btn primary" id="mSave">Save changes</button>
         `
       });
 
-      $("#mCancel").onclick = closeModal;
-      $("#mAllSchools").onchange = ()=>{
-        const all = $("#mAllSchools").checked;
-        $$(".mSchool").forEach(cb=>{ cb.checked = false; cb.disabled = all; });
-      };
+      // fill deadline dates from existing (by key if possible)
+      const dlMap = new Map(existingDeadlines.map(d=>[d.key, d]));
+      for(let i=1;i<=6;i++){
+        const inp = document.getElementById(`mD${i}`);
+        if(!inp) continue;
+        const hit = dlMap.get(`d${i}`) || existingDeadlines[i-1];
+        inp.value = hit?.dueAt ? tsToInput(hit.dueAt) : "";
+      }
 
-      $("#mSave").onclick = async ()=>{
-        const uid = $("#mUid").value.trim();
-        const fullName = $("#mFullName").value.trim();
-        const email = $("#mEmail").value.trim();
-        const role = $("#mRole").value;
-        if(!uid) return toast("Missing", "UID is required.");
-        let schoolsSel = $$(".mSchool").filter(cb=>cb.checked).map(cb=>cb.value);
-        if($("#mAllSchools").checked) schoolsSel = ["*"];
-
-        const payload = {
-          fullName: fullName || email || uid,
-          email: email || "",
-          role,
-          schools: schoolsSel,
-          active: true,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp()
-        };
-
-        await setDoc(staffRef(uid), payload, {merge:true});
-        await addAudit("upsert_staff", {uid, role, schools: schoolsSel});
-        toast("Saved", "Staff updated.");
-        closeModal();
-        await refreshAll();
-      };
-    }
-
-    function openEditStaff(uid){
-      const st = state.staff.find(x=>x.id===uid);
-      if(!st) return;
-
-      const schools = state.schools.map(s=>({id:s.id, name:s.name||s.id}));
-      const hasAll = (st.schools||[]).includes("*");
-
-      openModal({
-        title:`Edit staff — ${st.fullName || st.email || uid}`,
-        sub:"Update role, school access, and active status.",
-        bodyHTML: `
-          <div class="formRow">
-            <div>
-              <label class="smallNote">UID</label>
-              <input class="input" value="${esc(uid)}" disabled/>
-            </div>
-            <div>
-              <label class="smallNote">Full name</label>
-              <input class="input" id="mFullName" value="${esc(st.fullName||"")}"/>
-            </div>
-          </div>
-          <div class="formRow" style="margin-top:10px">
-            <div>
-              <label class="smallNote">Email</label>
-              <input class="input" id="mEmail" value="${esc(st.email||"")}"/>
-            </div>
-            <div>
-              <label class="smallNote">Role</label>
-              <select class="input" id="mRole">
-                ${ROLES.map(r=>`<option value="${esc(r.key)}" ${r.key===st.role?"selected":""}>${esc(r.name)}</option>`).join("")}
-              </select>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <label class="smallNote">School access</label>
-          <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03); margin-top:8px">
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <label class="tag" style="cursor:pointer">
-                <input type="checkbox" id="mAllSchools" ${hasAll?"checked":""}/> <span>All schools</span>
-              </label>
-              ${schools.map(s=>`
-                <label class="tag" style="cursor:pointer">
-                  <input type="checkbox" class="mSchool" value="${esc(s.id)}"/> <span>${esc(s.name)}</span>
-                </label>
-              `).join("")}
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <label class="smallNote">Status</label>
-          <select class="input" id="mActive" style="margin-top:8px">
-            <option value="true" ${st.active!==false?"selected":""}>Active</option>
-            <option value="false" ${st.active===false?"selected":""}>Disabled</option>
-          </select>
-        `,
-        footerHTML: `
-          <button class="btn" id="mCancel">Cancel</button>
-          <button class="btn primary" id="mSave">Save</button>
-        `
-      });
-
-      const allCB = $("#mAllSchools");
-      const schoolCBs = $$(".mSchool");
-      schoolCBs.forEach(cb=>{
-        cb.checked = (st.schools||[]).includes(cb.value);
-        cb.disabled = hasAll;
-      });
-      allCB.onchange = ()=>{
-        const all = allCB.checked;
-        schoolCBs.forEach(cb=>{ cb.checked = false; cb.disabled = all; });
-      };
+      function updateDlUI(){
+        const n = Number($("#mInstCount").value||4);
+        const step = 100 / n;
+        for(let i=1;i<=6;i++){
+          const wrap = document.querySelector(`.dl[data-i="${i}"]`);
+          if(wrap) wrap.style.display = i<=n ? "block" : "none";
+          const p = document.getElementById(`mP${i}`);
+          if(p){
+            const minPct = Math.round(step*i);
+            p.textContent = i<=n ? `min ${minPct}%` : "—";
+          }
+        }
+      }
+      $("#mInstCount").onchange = updateDlUI;
+      updateDlUI();
 
       $("#mCancel").onclick = closeModal;
-      $("#mSave").onclick = async ()=>{
-        const fullName = $("#mFullName").value.trim();
-        const email = $("#mEmail").value.trim();
-        const role = $("#mRole").value;
-        const active = $("#mActive").value==="true";
-        let schoolsSel = schoolCBs.filter(cb=>cb.checked).map(cb=>cb.value);
-        if(allCB.checked) schoolsSel = ["*"];
 
-        await updateDoc(staffRef(uid), {fullName, email, role, schools: schoolsSel, active, updatedAt: serverTimestamp()});
-        await addAudit("edit_staff", {uid, role, schools: schoolsSel, active});
-        toast("Saved", "Staff updated.");
-        closeModal();
-        await refreshAll();
+      $("#mSave").onclick = async ()=>{
+        try{
+          const name = $("#mSchoolName").value.trim() || s.name || s.id;
+          const instCount = Number($("#mInstCount").value||4);
+          const orderingOpen = $("#mOrdOpen").value==="true";
+          const active = $("#mActive").value==="true";
+          const sizeUntil = $("#mSizeUntil").value;
+
+          const dates = [];
+          for(let i=1;i<=instCount;i++){
+            const v = document.getElementById(`mD${i}`)?.value;
+            if(!v) return toast("Missing", `Set due date for D${i}.`);
+            dates.push(v);
+          }
+
+          const step = 100 / instCount;
+          const deadlines = [];
+          for(let i=1;i<=instCount;i++){
+            deadlines.push({
+              key: `d${i}`,
+              minPct: Math.round(step*i),
+              dueAt: Timestamp.fromDate(new Date(dates[i-1] + "T23:59:59"))
+            });
+          }
+          const percentSchedule = Array.from({length:instCount}, ()=> Math.round(100/instCount));
+
+          const payload = {
+            name,
+            orderingOpen,
+            active,
+            installmentsCount: instCount,
+            percentSchedule,
+            deadlines,
+            sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+            sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+            updatedAt: serverTimestamp()
+          };
+
+          await setDoc(schoolRef(s.id), payload, {merge:true});
+          await addAudit("edit_school", {schoolId:s.id, installmentsCount:instCount});
+          toast("Saved", "School updated.");
+          closeModal();
+          await refreshAll();
+        }catch(e){
+          toast("Error", e?.message || "Could not save school.");
+        }
       };
     }
-
-    async function toggleStaffActive(uid){
-      const st = state.staff.find(x=>x.id===uid);
-      if(!st) return;
-      const active = !(st.active!==false);
-      await updateDoc(staffRef(uid), {active, updatedAt: serverTimestamp()});
-      await addAudit("toggle_staff_active", {uid, active});
-      toast("Updated", `Staff ${active?"enabled":"disabled"}.`);
-      await refreshAll();
-    }
-
-    $("#btnOpenInviteStaff").addEventListener("click", openInviteStaff);
-
-    // =========================
-    // 14) Settings save
-    // =========================
-    $("#setAgencyId").value = state.agencyId;
-    $("#btnSaveAgencySettings").addEventListener("click", async ()=>{
-      const id = $("#setAgencyId").value.trim() || "senior_agency";
-      const name = $("#setAgencyName").value.trim() || "Senior Uniform Agency";
-      const bootstrapOwner = $("#setBootstrap").value === "on";
-
-      // if changing agencyId, we switch context
-      if(id !== state.agencyId){
-        state.agencyId = id;
-        localStorage.setItem("SUA_AGENCY_ID", id);
-        toast("Switched", `Agency ID set to ${id}. Refreshing...`);
-      }
-
-      await setDoc(agencyRef(), {name, bootstrapOwner, updatedAt: serverTimestamp()}, {merge:true});
-      await addAudit("save_agency_settings", {name, bootstrapOwner});
-      toast("Saved", "Agency settings updated.");
-      await refreshAll();
-    });
-
-    // =========================
-    // 15) Audit log
-    // =========================
-    $("#btnLoadAudit").addEventListener("click", loadAudit);
-    async function loadAudit(){
-      try{
-        const snap = await getDocs(query(auditCol(), orderBy("at","desc"), limit(60)));
-        const rows = snap.docs.map(d=>({id:d.id, ...d.data()}));
-        $("#auditTable").innerHTML = rows.map(r=>`
-          <tr class="row">
-            <td class="mono">${esc(fmtDateTime(r.at))}</td>
-            <td>${esc(r.actorName||"—")}</td>
-            <td><span class="badge"><b>${esc(r.action||"—")}</b></span></td>
-            <td class="mono">${esc(JSON.stringify(r.payload||{}).slice(0,180))}</td>
-          </tr>
-        `).join("");
-        toast("Loaded", "Audit log updated.");
-      }catch(e){
-        toast("Error", e?.message || "Could not load audit log.");
-      }
-    }
-
-    // =========================
-    // 16) Snapshot demo tools
-    // =========================
-    $("#btnSeedSnapshots").addEventListener("click", async ()=>{
-      // Seeds 14 days of random-ish snapshots to make charts look alive for demos.
-      // Safe: only writes to agencies/{agencyId}/snapshots.
-      const now = new Date();
-      let c=40, p=20, o=10, l=5;
-      for(let i=13;i>=0;i--){
-        const d = new Date(now);
-        d.setDate(d.getDate()-i);
-        const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0");
-        const key = `${y}-${m}-${da}`;
-        c = Math.min(100, c + (Math.random()*6));
-        p = Math.min(100, p + (Math.random()*5));
-        o = Math.min(100, o + (Math.random()*6));
-        l = Math.min(100, l + (Math.random()*5));
-        const ref = doc(db,"agencies",state.agencyId,"snapshots",key);
-        await setDoc(ref, {commitmentPct:c, paidPct:p, orderedPct:o, lockedPct:l, at: Timestamp.fromDate(d)}, {merge:true});
-      }
-      await addAudit("seed_snapshots", {});
-      toast("Seeded", "Demo snapshots created.");
-      await renderTrendsChart();
-    });
-
-    $("#btnClearSnapshots").addEventListener("click", async ()=>{
-      // No delete in this HTML to keep safe; just disable snapshots moving forward.
-      await setDoc(agencyRef(), {snapshotsEnabled:false, updatedAt: serverTimestamp()}, {merge:true});
-      await addAudit("disable_snapshots", {});
-      toast("Disabled", "Snapshot auto-saving disabled (no deletions).");
-      await ensureAgencyDoc();
-    });
-
-    // =========================
-    // 17) Refresh & time
-    // =========================
-    $("#btnRefresh").addEventListener("click", refreshAll);
-    $("#btnRecomputeAlerts").addEventListener("click", async ()=>{
-      await refreshAll();
-      showTab("alerts");
-      $$("#nav button").forEach(b=>b.classList.toggle("active", b.dataset.tab==="alerts"));
-    });
-
-    setInterval(()=>{ $("#pillNow").textContent = new Date().toLocaleString(); }, 900);
-    $("#pillNow").textContent = new Date().toLocaleString();
-
-    // =========================
-    // 18) Auth state bootstrap
-    // =========================
-    onAuthStateChanged(auth, async (user)=>{
-      if(!user){
-        state.uid = null;
-        state.me = null;
-        loginView.classList.remove("hide");
-        appView.classList.add("hide");
-        return;
-      }
-
-      state.uid = user.uid;
-
-      // load agency + me
-      try{
-        state.agencyId = localStorage.getItem("SUA_AGENCY_ID") || state.agencyId;
-        $("#setAgencyId").value = state.agencyId;
-        await ensureAgencyDoc();
-
-        const me = await loadMe(user.uid);
-        if(!me){
-          // Not authorized
-          loginView.classList.add("hide");
-          appView.classList.remove("hide");
-          $("#meName").textContent = user.email || "Unknown user";
-          $("#meRole").textContent = "No staff access";
-          showTab("settings");
-          $$("#nav button").forEach(b=>b.classList.toggle("active", b.dataset.tab==="settings"));
-          toast("Access denied", "You don't have a staff record in this agency.");
-          return;
-        }
-
-        state.me = me;
-        $("#meName").textContent = me.fullName || me.email || "—";
-        $("#meRole").textContent = `Role: ${ROLES.find(r=>r.key===me.role)?.name || me.role || "—"}`;
-
-        // Admin-only page (owner + senior managers)
-        if(!["owner"].includes(me.role)){
-          // You can widen this list if you want "Ops Manager" to see admin, but blueprint says owner + senior managers.
-          toast("Limited", "Your role is not Owner. You may have limited visibility here.");
-        }
-
-        loginView.classList.add("hide");
-        appView.classList.remove("hide");
-
-        await refreshAll();
-      }catch(e){
-        console.error(e);
-        toast("Init error", e?.message || "Could not initialize.");
-      }
-    });
 
   </script>
 </body>
