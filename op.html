@@ -313,7 +313,7 @@
                 <div class="meta" id="kpiCommitMeta">—</div>
               </div>
               <div class="kpi">
-                <div class="lbl">Avg paid %</div>
+                <div class="lbl">Collected (EGP)</div>
                 <div class="val" id="kpiPaid">—</div>
                 <div class="meta" id="kpiPaidMeta">—</div>
               </div>
@@ -528,12 +528,18 @@
       serverTimestamp, Timestamp
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+import {
+      getStorage, ref as sRef, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
+
     // =========================
     // 3) App init
     // =========================
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
     // =========================
     // 4) Helpers
@@ -759,15 +765,48 @@
     // =========================
     // 9) Dashboard compute + render
     // =========================
-    function computeKPIs(){
-      const st = state.students || [];
-      const total = st.length;
-      const committed = st.filter(x=>!!x.committedAt).length;
-      const ordered = st.filter(x=>!!x.orderedAt).length;
-      const locked = st.filter(x=>!!x.sizesLocked).length;
-      const avgPaid = total ? (st.reduce((a,x)=>a+Number(x.paidPct||0),0)/total) : 0;
-      return {total, committed, ordered, locked, avgPaid};
-    }
+    
+function computeKPIs(){
+  const st = state.students || [];
+  const total = st.length;
+
+  const committed = st.filter(s=>!!s.committedAt).length;
+  const ordered = st.filter(s=>!!s.orderedAt).length;
+  const locked = st.filter(s=>!!s.sizesLocked).length;
+
+  const pricePerStudent = Number(state.school?.packagePriceEGP || 0);
+
+  // Estimate per-student due/total:
+  const dueOf = (s)=>{
+    const v =
+      Number(s.totalEGP ?? s.totalDueEGP ?? s.orderTotalEGP ?? s.orderTotal ?? s.order?.total ?? s.order?.totalEGP ?? 0);
+    if(isFinite(v) && v>0) return v;
+    return isFinite(pricePerStudent) ? pricePerStudent : 0;
+  };
+
+  // Collected: if we have paidAmount, use it; else use paidPct * due
+  const collectedOf = (s)=>{
+    const paidAmount =
+      Number(s.paidAmountEGP ?? s.paidAmount ?? s.paidEGP ?? 0);
+    if(isFinite(paidAmount) && paidAmount>0) return paidAmount;
+    const pct = Math.max(0, Math.min(100, Number(s.paidPct||0)));
+    return dueOf(s) * (pct/100);
+  };
+
+  const totalDueEGP = st.reduce((a,s)=>a + dueOf(s), 0);
+  const collectedEGP = st.reduce((a,s)=>a + collectedOf(s), 0);
+  const outstandingEGP = Math.max(0, totalDueEGP - collectedEGP);
+
+  // Also keep a % metric (useful for trend + alerts)
+  const avgPaidPct = total ? (st.reduce((a,s)=>a + Number(s.paidPct||0),0)/total) : 0;
+
+  return {
+    total, committed, ordered, locked,
+    totalDueEGP, collectedEGP, outstandingEGP,
+    avgPaidPct
+  };
+}
+
 
     function computeDeadlineStatus(){
       const s = state.school || {};
@@ -784,36 +823,48 @@
       return rows;
     }
 
-    function renderTimeline(){
-      const rows = computeDeadlineStatus();
-      const wrap = $("#timelineWrap");
-      if(!rows.length){
-        wrap.innerHTML = `<div class="muted">No deadlines configured.</div>`;
-        return;
-      }
-      wrap.innerHTML = rows.map(r=>{
-        const sev = (r.isPast && r.missed>0) ? "danger" : (r.isPast ? "warn" : "info");
-        const dot = sev==="danger"?"danger":(sev==="warn"?"warn":"info");
-        const note = r.isPast
-          ? (r.missed>0 ? `${r.missed}/${r.total} below ${r.minPct}%` : "Met")
-          : "Upcoming";
-        return `
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
-            <div>
-              <div class="tag"><span class="dot ${dot}"></span><span>${esc(String(r.key||"").toUpperCase())}</span></div>
-              <div style="margin-top:8px" class="strong">Min ${esc(r.minPct)}% — due ${esc(fmtDate(r.dueAt))}</div>
-              <div class="muted" style="margin-top:6px">${esc(note)}</div>
-            </div>
-            <div>
-              <button class="btn small warn" data-extend="${esc(r.key)}">Extend</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-      wrap.querySelectorAll("button[data-extend]").forEach(b=>{
-        b.addEventListener("click", ()=> openExtendDeadline(b.dataset.extend));
-      });
+    
+function renderTimeline(){
+  const rows = computeDeadlineStatus();
+  const wrap = $("#timelineWrap");
+  if(!rows.length){
+    wrap.innerHTML = `<div class="muted">No deadlines configured.</div>`;
+    return;
+  }
+
+  const pctSchedule = Array.isArray(state.school?.percentSchedule) ? state.school.percentSchedule.map(n=>Number(n||0)) : null;
+
+  wrap.innerHTML = rows.map((r, idx)=>{
+    const sev = r.status==="missed" ? "danger" : (r.status==="due" ? "warn" : "ok");
+    const dueDate = fmtDate(r.dueAt);
+    // show installment % (not cumulative)
+    let installmentPct = null;
+    if(pctSchedule && pctSchedule[idx]!=null) installmentPct = Number(pctSchedule[idx]||0);
+    else{
+      // fallback: derive from cumulative minPct differences
+      const prev = idx>0 ? Number(rows[idx-1].minPct||0) : 0;
+      installmentPct = Math.max(0, Number(r.minPct||0) - prev);
     }
+
+    return `
+      <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div>
+            <div class="tag">
+              <span class="dot ${sev}"></span>
+              <span><b>${esc(String(r.key||"").toUpperCase())}</b> — Pay <b>${Math.round(installmentPct)}%</b></span>
+            </div>
+            <div class="smallNote" style="margin-top:8px">Due: ${esc(dueDate)} • Cumulative minimum after this deadline: <b>${Math.round(Number(r.minPct||0))}%</b></div>
+          </div>
+          <div class="badge"><b>${esc(r.status.toUpperCase())}</b></div>
+        </div>
+        <div class="hr"></div>
+        <div class="smallNote">${esc(r.note||"")}</div>
+      </div>
+    `;
+  }).join("");
+}
+
 
     function ragTemplate(){
       return [
@@ -867,21 +918,31 @@
       await refreshAll();
     }
 
-    function renderDashKPIs(){
-      const k = computeKPIs();
-      $("#kpiCommit").textContent = fmtPct(k.total ? k.committed/k.total*100 : 0);
-      $("#kpiCommitMeta").textContent = `${k.committed}/${k.total} committed`;
-      $("#kpiPaid").textContent = fmtPct(k.avgPaid);
-      $("#kpiPaidMeta").textContent = `Average across students`;
-      $("#kpiOrdered").textContent = fmtPct(k.total ? k.ordered/k.total*100 : 0);
-      $("#kpiOrderedMeta").textContent = `${k.ordered}/${k.total} ordered`;
-      $("#kpiLocked").textContent = fmtPct(k.total ? k.locked/k.total*100 : 0);
-      $("#kpiLockedMeta").textContent = `${k.locked}/${k.total} locked`;
-    }
+    
+function renderDashKPIs(){
+  const k = computeKPIs();
 
-    // =========================
-    // 10) Students table + actions
-    // =========================
+  $("#kpiCommit").textContent = fmtPct(k.total ? (k.committed/k.total*100) : 0);
+  $("#kpiCommitMeta").textContent = `${k.committed}/${k.total} students committed`;
+
+  // Replace the "Paid %" KPI with money collected
+  const fmtEGP = (n)=> {
+    const v = Number(n||0);
+    if(!isFinite(v)) return "—";
+    return v.toLocaleString(undefined, {maximumFractionDigits:0}) + " EGP";
+  };
+
+  $("#kpiPaid").textContent = `${fmtEGP(k.collectedEGP)} / ${fmtEGP(k.totalDueEGP)}`;
+  $("#kpiPaidMeta").textContent = `Collected vs total due (set package price in School Settings if totals are 0)`;
+  $("#kpiPaidTrend").textContent = `Avg paid: ${Math.round(k.avgPaidPct)}%`;
+
+  $("#kpiOrdered").textContent = fmtPct(k.total ? (k.ordered/k.total*100) : 0);
+  $("#kpiOrderedMeta").textContent = `${k.ordered}/${k.total} placed orders`;
+
+  $("#kpiLocked").textContent = fmtPct(k.total ? (k.locked/k.total*100) : 0);
+  $("#kpiLockedMeta").textContent = `${k.locked}/${k.total} sizes locked`;
+}
+
     function studentGateStatus(stu){
       // Purely computed status for UI. Enforcement lives in student portal + ops policies.
       const s = state.school || {};
@@ -1381,151 +1442,264 @@
       tbody.querySelectorAll("button[data-del-prod]").forEach(b=> b.addEventListener("click", ()=> disableProduct(b.dataset.delProd)));
     }
 
-    function openAddProduct(){
-      if(!canEditProducts()) return toast("Blocked","Only Owner/Product Manager can edit products.");
-      openModal({
-        title:"Add product",
-        sub:"Per-school product. Student portal will show available products and enforce printed-name settings.",
-        bodyHTML: `
-          <div class="row">
-            <div style="flex:1;min-width:220px">
-              <div class="label">Name (English)</div>
-              <input class="input" id="mEn" placeholder="e.g. Blazer">
-            </div>
-            <div style="flex:1;min-width:220px">
-              <div class="label">Name (Arabic)</div>
-              <input class="input" id="mAr" placeholder="مثال: بليزر">
-            </div>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <div style="flex:1;min-width:220px">
-              <div class="label">Category (optional)</div>
-              <input class="input" id="mCat" placeholder="e.g. Boys / Girls / Accessories">
-            </div>
-            <div style="flex:1;min-width:220px">
-              <div class="label">Size options (comma separated)</div>
-              <input class="input" id="mSizes" placeholder="XS,S,M,L,XL">
-            </div>
-          </div>
-          <div class="hr"></div>
-          <label class="tag"><input type="checkbox" id="mPrinted" style="transform:scale(1.1)"> Enable printed name field</label>
-          <label class="tag" style="margin-left:8px"><input type="checkbox" id="mPrintedReq" style="transform:scale(1.1)"> Printed name required</label>
-          <div class="muted" style="margin-top:10px">If required, student must enter the printed name to proceed.</div>
-        `,
-        footHTML: `
-          <button class="btn" id="mCancel">Cancel</button>
-          <button class="btn primary" id="mSave">Create</button>
-        `
+    
+function openAddProduct(){
+  if(!state.schoolId) return toast("Select school","Open a school first.");
+  openModal({
+    title:"Add product",
+    sub:"Product name is English only. Printed name can be English or Arabic (optional/required).",
+    bodyHTML: `
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Product name (English)</label>
+          <input class="input" id="mProdName" placeholder="e.g. Blazer"/>
+        </div>
+        <div>
+          <label class="smallNote">Category (optional)</label>
+          <input class="input" id="mProdCat" placeholder="e.g. Boys / Girls / Accessories"/>
+        </div>
+      </div>
+
+      <div class="formRow" style="margin-top:10px">
+        <div>
+          <label class="smallNote">Price (EGP)</label>
+          <input class="input" id="mProdPrice" type="number" min="0" step="1" placeholder="0"/>
+        </div>
+        <div>
+          <label class="smallNote">Printed name</label>
+          <select class="input" id="mPrintedMode">
+            <option value="off">Not needed</option>
+            <option value="optional" selected>Optional</option>
+            <option value="required">Required</option>
+          </select>
+          <div class="smallNote" style="margin-top:6px">Student can type printed name in English or Arabic.</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <label class="smallNote">Available sizes</label>
+      <div class="chips" id="mSizes"><label class="chip"><input type="checkbox" class="mSizeOpt" value="XS"><span>XS</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="S"><span>S</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="M"><span>M</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="L"><span>L</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="XL"><span>XL</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="2XL"><span>2XL</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="3XL"><span>3XL</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="4XL"><span>4XL</span></label></div>
+
+      <div class="hr"></div>
+
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Product image (upload)</label>
+          <input class="input" id="mProdImg" type="file" accept="image/*"/>
+          <div class="smallNote" style="margin-top:6px">If you upload a new image, it replaces the old one.</div>
+        </div>
+        <div>
+          <label class="smallNote">Size chart (upload)</label>
+          <input class="input" id="mSizeChart" type="file" accept="image/*,application/pdf"/>
+          <div class="smallNote" style="margin-top:6px">PNG/JPG/PDF. Saved per product.</div>
+        </div>
+      </div>
+    `,
+    footerHTML: `
+      <button class="btn" id="mCancel">Cancel</button>
+      <button class="btn primary" id="mSave">Save product</button>
+    `
+  });
+
+  $("#mCancel").onclick = closeModal;
+
+  $("#mSave").onclick = async ()=>{
+    try{
+      const name = ($("#mProdName").value||"").trim();
+      if(!name) return toast("Missing","Enter product name (English).");
+      const category = ($("#mProdCat").value||"").trim();
+      const price = Number($("#mProdPrice").value||0);
+      const printedMode = $("#mPrintedMode").value;
+
+      const sizes = Array.from(document.querySelectorAll(".mSizeOpt"))
+        .filter(x=>x.checked)
+        .map(x=>x.value);
+      if(!sizes.length) return toast("Missing","Select at least 1 size.");
+
+      // create doc first to get id for storage paths
+      const ref = await addDoc(productsCol(state.schoolId), {
+        name,
+        category: category || null,
+        price: isFinite(price) ? price : 0,
+        sizes,
+        printedMode,
+        imageUrl: "",
+        sizeChartUrl: "",
+        active:true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
-      $("#mCancel").onclick = closeModal;
-      $("#mSave").onclick = async ()=>{
-        const nameEn = ($("#mEn").value||"").trim();
-        const nameAr = ($("#mAr").value||"").trim();
-        if(!nameEn && !nameAr) return toast("Missing","Enter at least one name (EN or AR).");
-        const category = ($("#mCat").value||"").trim();
-        const sizeOptions = ($("#mSizes").value||"").split(",").map(x=>x.trim()).filter(Boolean);
-        const enablePrintedName = $("#mPrinted").checked;
-        const requirePrintedName = $("#mPrintedReq").checked;
-        const id = `prod_${Math.random().toString(16).slice(2,10)}`;
-        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",id),{
-          nameEn, nameAr, category,
-          sizeOptions,
-          enablePrintedName,
-          requirePrintedName,
-          active:true,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        }, {merge:true});
-        await addAudit("create_product", {productId:id});
-        toast("Created","Product added.");
-        closeModal();
-        await refreshAll();
-        showTab("products");
-      };
+
+      // uploads
+      const imgFile = $("#mProdImg")?.files?.[0];
+      const chartFile = $("#mSizeChart")?.files?.[0];
+      const patch = {updatedAt: serverTimestamp()};
+
+      if(imgFile){
+        const path = `agencies/${state.agencyId}/schools/${state.schoolId}/products/${ref.id}/image_${Date.now()}_${imgFile.name.replace(/[^a-z0-9_.-]/gi,"_")}`;
+        patch.imageUrl = await uploadToStorage(path, imgFile);
+      }
+      if(chartFile){
+        const path = `agencies/${state.agencyId}/schools/${state.schoolId}/products/${ref.id}/sizeChart_${Date.now()}_${chartFile.name.replace(/[^a-z0-9_.-]/gi,"_")}`;
+        patch.sizeChartUrl = await uploadToStorage(path, chartFile);
+      }
+
+      await updateDoc(ref, patch);
+      await addAudit("add_product", {schoolId:state.schoolId, productId:ref.id, name});
+      toast("Saved","Product added.");
+      closeModal();
+      await loadProducts();
+    }catch(e){
+      toast("Error", e?.message || "Could not save product.");
     }
+  };
+}
 
-    function openEditProduct(productId){
-      const p = state.products.find(x=>x.id===productId);
-      if(!p) return;
-      if(!canEditProducts()) return toast("Blocked","Only Owner/Product Manager can edit products.");
-      openModal({
-        title:`Edit product — ${p.nameEn || p.nameAr || productId}`,
-        sub:"Update product fields.",
-        bodyHTML: `
-          <div class="row">
-            <div style="flex:1;min-width:220px">
-              <div class="label">Name (English)</div>
-              <input class="input" id="mEn" value="${esc(p.nameEn||"")}">
-            </div>
-            <div style="flex:1;min-width:220px">
-              <div class="label">Name (Arabic)</div>
-              <input class="input" id="mAr" value="${esc(p.nameAr||"")}">
-            </div>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <div style="flex:1;min-width:220px">
-              <div class="label">Category</div>
-              <input class="input" id="mCat" value="${esc(p.category||"")}">
-            </div>
-            <div style="flex:1;min-width:220px">
-              <div class="label">Size options (comma separated)</div>
-              <input class="input" id="mSizes" value="${esc((p.sizeOptions||[]).join(","))}">
-            </div>
-          </div>
-          <div class="hr"></div>
-          <label class="tag"><input type="checkbox" id="mPrinted" style="transform:scale(1.1)"> Enable printed name field</label>
-          <label class="tag" style="margin-left:8px"><input type="checkbox" id="mPrintedReq" style="transform:scale(1.1)"> Printed name required</label>
-        `,
-        footHTML: `
-          <button class="btn" id="mCancel">Cancel</button>
-          <button class="btn primary" id="mSave">Save</button>
-        `
-      });
-      $("#mPrinted").checked = !!p.enablePrintedName;
-      $("#mPrintedReq").checked = !!p.requirePrintedName;
 
-      $("#mCancel").onclick = closeModal;
-      $("#mSave").onclick = async ()=>{
-        const nameEn = ($("#mEn").value||"").trim();
-        const nameAr = ($("#mAr").value||"").trim();
-        const category = ($("#mCat").value||"").trim();
-        const sizeOptions = ($("#mSizes").value||"").split(",").map(x=>x.trim()).filter(Boolean);
-        const enablePrintedName = $("#mPrinted").checked;
-        const requirePrintedName = $("#mPrintedReq").checked;
-        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",productId),{
-          nameEn,nameAr,category,sizeOptions,enablePrintedName,requirePrintedName,
-          updatedAt: serverTimestamp()
-        }, {merge:true});
-        await addAudit("edit_product", {productId});
-        toast("Saved","Product updated.");
-        closeModal();
-        await refreshAll();
-        showTab("products");
+    
+function openEditProduct(productId){
+  const p = (state.products||[]).find(x=>x.id===productId);
+  if(!p) return;
+
+  openModal({
+    title:`Edit product — ${esc(p.name||productId)}`,
+    sub:"Update sizes, image, size chart, price, and printed-name rule.",
+    bodyHTML: `
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Product name (English)</label>
+          <input class="input" id="mProdName" value="${esc(p.name||"")}"/>
+        </div>
+        <div>
+          <label class="smallNote">Category (optional)</label>
+          <input class="input" id="mProdCat" value="${esc(p.category||"")}"/>
+        </div>
+      </div>
+
+      <div class="formRow" style="margin-top:10px">
+        <div>
+          <label class="smallNote">Price (EGP)</label>
+          <input class="input" id="mProdPrice" type="number" min="0" step="1" value="${esc(p.price||0)}"/>
+        </div>
+        <div>
+          <label class="smallNote">Printed name</label>
+          <select class="input" id="mPrintedMode">
+            <option value="off" ${p.printedMode==="off"?"selected":""}>Not needed</option>
+            <option value="optional" ${(!p.printedMode || p.printedMode==="optional")?"selected":""}>Optional</option>
+            <option value="required" ${p.printedMode==="required"?"selected":""}>Required</option>
+          </select>
+          <div class="smallNote" style="margin-top:6px">Student can type printed name in English or Arabic.</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <label class="smallNote">Available sizes</label>
+      <div class="chips" id="mSizes"><label class="chip"><input type="checkbox" class="mSizeOpt" value="XS"><span>XS</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="S"><span>S</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="M"><span>M</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="L"><span>L</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="XL"><span>XL</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="2XL"><span>2XL</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="3XL"><span>3XL</span></label><label class="chip"><input type="checkbox" class="mSizeOpt" value="4XL"><span>4XL</span></label></div>
+
+      <div class="hr"></div>
+
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Product image (upload)</label>
+          <input class="input" id="mProdImg" type="file" accept="image/*"/>
+          <div class="smallNote" style="margin-top:6px">Current: ${p.imageUrl ? "set" : "none"}</div>
+        </div>
+        <div>
+          <label class="smallNote">Size chart (upload)</label>
+          <input class="input" id="mSizeChart" type="file" accept="image/*,application/pdf"/>
+          <div class="smallNote" style="margin-top:6px">Current: ${p.sizeChartUrl ? "set" : "none"}</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Active</label>
+          <select class="input" id="mActive">
+            <option value="true" ${p.active!==false?"selected":""}>Active</option>
+            <option value="false" ${p.active===false?"selected":""}>Inactive</option>
+          </select>
+        </div>
+        <div class="smallNote" style="align-self:end">
+          Tip: Inactive products won't appear for students.
+        </div>
+      </div>
+    `,
+    footerHTML: `
+      <button class="btn" id="mCancel">Cancel</button>
+      <button class="btn danger" id="mDelete">Delete</button>
+      <button class="btn primary" id="mSave">Save</button>
+    `
+  });
+
+  // pre-check sizes
+  const set = new Set((p.sizes||[]).map(x=>String(x).toUpperCase()));
+  document.querySelectorAll(".mSizeOpt").forEach(ch=>{ if(set.has(ch.value)) ch.checked = true; });
+
+  $("#mCancel").onclick = closeModal;
+
+  $("#mDelete").onclick = async ()=>{
+    if(!confirm("Delete this product?")) return;
+    try{
+      await updateDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",productId), {deleted:true, active:false, updatedAt: serverTimestamp()});
+      await addAudit("delete_product", {schoolId:state.schoolId, productId});
+      toast("Deleted","Product removed (soft delete).");
+      closeModal();
+      await loadProducts();
+    }catch(e){ toast("Error", e?.message || "Could not delete."); }
+  };
+
+  $("#mSave").onclick = async ()=>{
+    try{
+      const name = ($("#mProdName").value||"").trim();
+      if(!name) return toast("Missing","Enter product name (English).");
+      const category = ($("#mProdCat").value||"").trim();
+      const price = Number($("#mProdPrice").value||0);
+      const printedMode = $("#mPrintedMode").value;
+      const active = $("#mActive").value==="true";
+
+      const sizes = Array.from(document.querySelectorAll(".mSizeOpt"))
+        .filter(x=>x.checked)
+        .map(x=>x.value);
+      if(!sizes.length) return toast("Missing","Select at least 1 size.");
+
+      const patch = {
+        name,
+        category: category || null,
+        price: isFinite(price) ? price : 0,
+        sizes,
+        printedMode,
+        active,
+        updatedAt: serverTimestamp()
       };
-    }
 
-    async function disableProduct(productId){
-      if(!canEditProducts()) return toast("Blocked","Only Owner/Product Manager can edit products.");
-      openModal({
-        title:"Disable product",
-        sub:"This hides it from student ordering (soft disable).",
-        bodyHTML:`<div class="muted">Product: <span class="mono">${esc(productId)}</span></div>`,
-        footHTML:`<button class="btn" id="mCancel">Cancel</button><button class="btn danger" id="mDo">Disable</button>`
-      });
-      $("#mCancel").onclick = closeModal;
-      $("#mDo").onclick = async ()=>{
-        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",productId),{active:false, updatedAt: serverTimestamp()}, {merge:true});
-        await addAudit("disable_product", {productId});
-        closeModal();
-        toast("Updated","Product disabled.");
-        await refreshAll();
-        showTab("products");
-      };
-    }
+      // uploads (optional)
+      const imgFile = $("#mProdImg")?.files?.[0];
+      const chartFile = $("#mSizeChart")?.files?.[0];
 
-    // =========================
-    // 13) Warehouse
-    // =========================
+      if(imgFile){
+        const path = `agencies/${state.agencyId}/schools/${state.schoolId}/products/${productId}/image_${Date.now()}_${imgFile.name.replace(/[^a-z0-9_.-]/gi,"_")}`;
+        patch.imageUrl = await uploadToStorage(path, imgFile);
+      }
+      if(chartFile){
+        const path = `agencies/${state.agencyId}/schools/${state.schoolId}/products/${productId}/sizeChart_${Date.now()}_${chartFile.name.replace(/[^a-z0-9_.-]/gi,"_")}`;
+        patch.sizeChartUrl = await uploadToStorage(path, chartFile);
+      }
+
+      await updateDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",productId), patch);
+      await addAudit("edit_product", {schoolId:state.schoolId, productId, name});
+      toast("Saved","Product updated.");
+      closeModal();
+      await loadProducts();
+    }catch(e){
+      toast("Error", e?.message || "Could not save.");
+    }
+  };
+}
+
     function canWarehouse(){
       return (state.me.role==="owner" || state.me.role==="warehouse" || state.me.role==="ops");
     }
@@ -1606,61 +1780,158 @@
       return (state.me.role==="owner" || state.me.role==="ops");
     }
 
-    function openSchoolSettings(){
-      if(!state.schoolId) return;
-      if(!canEditSchool()) return toast("Blocked","Only Owner/Ops can edit school settings.");
-      const s = state.school || {};
-      const instCount = Number(s.installmentsCount || 4);
-      const deadlines = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(instCount);
+    
+function openSchoolSettings(){
+  if(!state.schoolId) return toast("Select school","Open a school first.");
+  const s = state.school || {};
+  const instCount0 = Number(s.installmentsCount || (s.percentSchedule?.length) || (s.deadlines?.length) || 4);
 
-      const tsToInput = (ts)=>{
-        if(!ts) return "";
-        const d = ts.toDate ? ts.toDate() : new Date(ts);
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const tsToInput = (ts)=>{
+    if(!ts) return "";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  };
+
+  // percent schedule: per-installment %
+  const buildPercentSchedule = (n)=>{
+    const base = Math.floor(100/n);
+    const rem = 100 - base*n;
+    return Array.from({length:n}, (_,i)=> base + (i<rem?1:0));
+  };
+
+  let percentSchedule = Array.isArray(s.percentSchedule) && s.percentSchedule.length
+    ? s.percentSchedule.map(x=>Number(x||0))
+    : buildPercentSchedule(instCount0);
+
+  const existingDeadlines = Array.isArray(s.deadlines) ? s.deadlines : [];
+
+  const dlByKey = new Map(existingDeadlines.map(d=>[d.key, d]));
+
+  openModal({
+    title:`School settings — ${esc(s.name || state.schoolId)}`,
+    sub:"This controls gating (deadlines/ordering/size lock) and the money KPIs.",
+    bodyHTML: `
+      <div class="formRow3">
+        <div>
+          <label class="smallNote">Installments</label>
+          <select class="input" id="mInstCount">
+            ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===instCount0?"selected":""}>${n}</option>`).join("")}
+          </select>
+          <div class="smallNote" style="margin-top:6px">Deadlines will map to installment % (not cumulative in UI).</div>
+        </div>
+        <div>
+          <label class="smallNote">Ordering window</label>
+          <select class="input" id="mOrdering">
+            <option value="true" ${s.orderingOpen!==false?"selected":""}>Open</option>
+            <option value="false" ${s.orderingOpen===false?"selected":""}>Closed</option>
+          </select>
+        </div>
+        <div>
+          <label class="smallNote">Size edits allowed until</label>
+          <input class="input" id="mSizeUntil" type="date" value="${tsToInput(s.sizeEditsUntil || s.sizeLockDate)}"/>
+        </div>
+      </div>
+
+      <div class="formRow" style="margin-top:10px">
+        <div>
+          <label class="smallNote">Uniform package price per student (EGP)</label>
+          <input class="input" id="mPkgPrice" type="number" min="0" step="1" value="${esc(Number(s.packagePriceEGP||0))}"/>
+          <div class="smallNote" style="margin-top:6px">Used for KPI totals if students don't have itemized totals yet.</div>
+        </div>
+        <div class="smallNote" style="align-self:end">
+          Tip: You can still use % payments; KPI shows EGP collected / total due.
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="smallNote" style="margin-bottom:8px">Deadlines (each deadline shows the installment % that should be paid at that date):</div>
+      <div id="mDeadlines"></div>
+    `,
+    footerHTML: `
+      <button class="btn" id="mCancel">Cancel</button>
+      <button class="btn primary" id="mSave">Save</button>
+    `
+  });
+
+  const renderDeadlinesUI = ()=>{
+    const n = Number($("#mInstCount").value||4);
+    percentSchedule = buildPercentSchedule(n);
+
+    const wrap = $("#mDeadlines");
+    wrap.innerHTML = Array.from({length:n}, (_,i)=>{
+      const key = `d${i+1}`;
+      const existing = dlByKey.get(key) || existingDeadlines[i] || {};
+      const dateVal = tsToInput(existing.dueAt);
+      return `
+        <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03); margin-bottom:10px">
+          <div class="tag"><span class="dot info"></span><span><b>${key.toUpperCase()}</b> — Pay <b>${percentSchedule[i]}%</b></span></div>
+          <div class="formRow" style="margin-top:10px">
+            <div>
+              <label class="smallNote">Due date</label>
+              <input class="input" id="mDL_${i}" type="date" value="${esc(dateVal)}"/>
+            </div>
+            <div class="smallNote" style="align-self:end">This is the installment % (not cumulative). System still enforces cumulative minimum behind the scenes.</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  };
+
+  $("#mInstCount").onchange = renderDeadlinesUI;
+  renderDeadlinesUI();
+
+  $("#mCancel").onclick = closeModal;
+
+  $("#mSave").onclick = async ()=>{
+    try{
+      const n = Number($("#mInstCount").value||4);
+      const orderingOpen = $("#mOrdering").value==="true";
+      const sizeUntil = $("#mSizeUntil").value;
+      const packagePriceEGP = Number($("#mPkgPrice").value||0);
+
+      const dates = [];
+      for(let i=0;i<n;i++){
+        const v = $(`#mDL_${i}`)?.value;
+        if(!v) return toast("Missing", `Set due date for D${i+1}.`);
+        dates.push(v);
+      }
+
+      const ps = buildPercentSchedule(n);
+      let cum = 0;
+      const deadlines = ps.map((pct,i)=>{
+        cum += pct;
+        return {
+          key:`d${i+1}`,
+          pctDue: pct,            // installment %
+          minPct: cum,            // cumulative minimum for gating
+          dueAt: Timestamp.fromDate(new Date(dates[i] + "T23:59:59"))
+        };
+      });
+
+      const patch = {
+        installmentsCount: n,
+        percentSchedule: ps,
+        deadlines,
+        orderingOpen,
+        packagePriceEGP: isFinite(packagePriceEGP) ? packagePriceEGP : 0,
+        sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+        sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+        updatedAt: serverTimestamp()
       };
 
-      openModal({
-        title:`School settings — ${s.name || state.schoolId}`,
-        sub:"Ordering window, size lock, and installment deadlines.",
-        bodyHTML: `
-          <div class="row">
-            <div style="flex:1;min-width:220px">
-              <div class="label">School name</div>
-              <input class="input" id="mName" value="${esc(s.name||"")}">
-            </div>
-            <div style="flex:1;min-width:220px">
-              <div class="label">Ordering window</div>
-              <select class="input" id="mOrd">
-                <option value="true" ${s.orderingOpen!==false?"selected":""}>Open</option>
-                <option value="false" ${s.orderingOpen===false?"selected":""}>Closed</option>
-              </select>
-            </div>
-          </div>
+      await setDoc(schoolRef(state.schoolId), patch, {merge:true});
+      await addAudit("edit_school_settings", {schoolId:state.schoolId, installmentsCount:n, orderingOpen, packagePriceEGP});
+      toast("Saved","School settings updated.");
+      closeModal();
+      await loadSchool(state.schoolId);
+      await refreshAll();
+    }catch(e){
+      toast("Error", e?.message || "Could not save settings.");
+    }
+  };
+}
 
-          <div class="row" style="margin-top:10px">
-            <div style="flex:1;min-width:220px">
-              <div class="label">Size edits allowed until</div>
-              <input class="input" id="mSizeUntil" type="date" value="${esc(tsToInput(s.sizeEditsUntil || s.sizeLockDate))}">
-            </div>
-            <div style="flex:1;min-width:220px">
-              <div class="label">Installments count</div>
-              <select class="input" id="mInst">
-                ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===instCount?"selected":""}>${n}</option>`).join("")}
-              </select>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-          <div class="strong">Deadlines</div>
-          <div class="muted" style="margin-top:6px">Min % is auto-calculated (cumulative) from installments count.</div>
-          <div class="hr"></div>
-          <div id="dlWrap" class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"></div>
-        `,
-        footHTML: `
-          <button class="btn" id="mCancel">Cancel</button>
-          <button class="btn primary" id="mSave">Save</button>
-        `
-      });
 
       function buildDl(){
         const n = Number($("#mInst").value||4);
@@ -1901,3 +2172,9 @@
   </script>
 </body>
 </html>
+
+    async function uploadToStorage(path, file){
+      const r = sRef(storage, path);
+      await uploadBytes(r, file);
+      return await getDownloadURL(r);
+    }
