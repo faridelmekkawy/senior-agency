@@ -1,0 +1,2195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Senior Uniform Agency — Admin Control Tower</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(255,255,255,.08);
+      --border:rgba(255,255,255,.12);
+      --ink:#f8fafc;
+      --muted:rgba(248,250,252,.72);
+      --muted2:rgba(248,250,252,.55);
+      --accent:#60a5fa;
+      --accent2:#22c55e;
+      --warn:#fbbf24;
+      --danger:#fb7185;
+      --ok:#34d399;
+      --shadow:0 18px 60px rgba(0,0,0,.45);
+      --radius:18px;
+      --radius2:22px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(1200px 700px at 20% 0%, rgba(96,165,250,.25), transparent 60%),
+        radial-gradient(900px 600px at 90% 10%, rgba(34,197,94,.18), transparent 55%),
+        radial-gradient(800px 650px at 50% 110%, rgba(251,113,133,.16), transparent 55%),
+        linear-gradient(180deg, #070a14, #0b1020 55%, #070a14);
+      overflow-x:hidden;
+    }
+    a{color:inherit}
+    .app{display:grid; grid-template-columns: 290px 1fr; min-height:100vh}
+    .sidebar{
+      position:sticky; top:0; height:100vh;
+      padding:18px 14px;
+      border-right:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      backdrop-filter: blur(10px);
+    }
+    .brand{
+      display:flex; gap:12px; align-items:center;
+      padding:12px 12px; border:1px solid var(--border);
+      border-radius: var(--radius2);
+      background:rgba(255,255,255,.05);
+      box-shadow: var(--shadow);
+    }
+    .logo{
+      width:42px;height:42px;border-radius:14px;
+      background: radial-gradient(circle at 30% 30%, rgba(96,165,250,.9), rgba(34,197,94,.85));
+      border:1px solid rgba(255,255,255,.18);
+      flex:0 0 auto;
+    }
+    .brand h1{font-size:14px;margin:0;letter-spacing:.2px}
+    .brand p{margin:2px 0 0; font-size:12px; color:var(--muted)}
+    .nav{margin-top:14px; display:flex; flex-direction:column; gap:8px}
+    .nav button{
+      text-align:left;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      color:var(--ink);
+      padding:10px 12px;
+      border-radius:16px;
+      font-weight:600;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:space-between;
+      transition:.15s transform, .15s background, .15s border;
+    }
+    .nav button:hover{transform: translateY(-1px); background:rgba(255,255,255,.06)}
+    .nav button.active{background:rgba(96,165,250,.16); border-color: rgba(96,165,250,.5)}
+    .nav .chip{
+      font-size:11px; font-weight:800;
+      padding:3px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      color:var(--muted);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .sidebar .foot{
+      position:absolute; left:14px; right:14px; bottom:14px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+    }
+    .mini{font-size:12px;color:var(--muted)}
+    .btn{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.05);
+      color:var(--ink);
+      padding:10px 12px;
+      border-radius:14px;
+      font-weight:700;
+      cursor:pointer;
+      transition:.15s transform, .15s background, .15s border;
+      display:inline-flex; align-items:center; gap:8px;
+      user-select:none;
+    }
+    .btn:hover{transform: translateY(-1px); background:rgba(255,255,255,.07)}
+    .btn.primary{background:rgba(96,165,250,.22); border-color:rgba(96,165,250,.55)}
+    .btn.good{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.5)}
+    .btn.warn{background:rgba(251,191,36,.16); border-color:rgba(251,191,36,.45)}
+    .btn.danger{background:rgba(251,113,133,.16); border-color:rgba(251,113,133,.5)}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:8px 10px; font-size:12px; border-radius:12px}
+    .btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
+    .content{padding:22px 22px 90px}
+    .topbar{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      margin-bottom:16px;
+    }
+    .title h2{margin:0; font-size:18px}
+    .title p{margin:6px 0 0; font-size:13px; color:var(--muted)}
+    .pillrow{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+    .pill{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:8px 10px;
+      font-size:12px;
+      color:var(--muted);
+      display:flex; gap:8px; align-items:center;
+    }
+    .pill b{color:var(--ink)}
+    .grid{display:grid; gap:14px}
+    .grid.kpis{grid-template-columns: repeat(4, minmax(0,1fr))}
+    .grid.twocol{grid-template-columns: 1.25fr .75fr}
+    .card{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius: var(--radius2);
+      padding:14px;
+      box-shadow: var(--shadow);
+    }
+    .card h3{margin:0; font-size:13px}
+    .card .sub{margin:6px 0 0; font-size:12px; color:var(--muted)}
+    .kpiVal{font-size:26px; font-weight:900; margin-top:8px; letter-spacing:-.4px}
+    .kpiMeta{margin-top:8px; font-size:12px; color:var(--muted2); display:flex; justify-content:space-between; gap:10px}
+    .kpiMeta span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .tag{display:inline-flex; align-items:center; gap:8px; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:rgba(255,255,255,.04); color:var(--muted)}
+    .tag .dot{width:8px;height:8px;border-radius:50%}
+    .dot.ok{background:var(--ok)}
+    .dot.warn{background:var(--warn)}
+    .dot.danger{background:var(--danger)}
+    .dot.info{background:var(--accent)}
+    .table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0 10px;
+    }
+    .table th{
+      text-align:left;
+      font-size:11px;
+      color:var(--muted);
+      font-weight:800;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+      padding:0 10px 6px;
+    }
+    .row{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+    }
+    .row td{
+      padding:12px 10px;
+      border-top:1px solid rgba(255,255,255,.0);
+      font-size:13px;
+      vertical-align:middle;
+    }
+    .row td.mono{font-family:var(--mono); font-size:12px; color:var(--muted)}
+    .row td.right{text-align:right}
+    .row td .muted{color:var(--muted); font-size:12px}
+    .row td .strong{font-weight:800}
+    .actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+    .input, select, textarea{
+      width:100%;
+      padding:11px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:rgba(10,14,26,.55);
+      color:var(--ink);
+      outline:none;
+      font-family:inherit;
+      font-size:13px;
+    }
+    textarea{min-height:92px; resize:vertical}
+    .formRow{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .formRow3{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px}
+    .formActions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px}
+    .hr{height:1px; background:rgba(255,255,255,.10); margin:12px 0}
+    .hide{display:none !important}
+    .toastWrap{
+      position:fixed; right:14px; top:14px;
+      display:flex; flex-direction:column; gap:10px;
+      z-index:9999;
+    }
+    .toast{
+      border:1px solid var(--border);
+      background:rgba(15,23,42,.88);
+      border-radius:16px;
+      padding:10px 12px;
+      box-shadow: var(--shadow);
+      max-width: 360px;
+    }
+    .toast b{display:block; font-size:12px}
+    .toast span{display:block; margin-top:2px; font-size:12px; color:var(--muted)}
+    .modalBackdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center; padding:18px;
+      z-index:9998;
+    }
+    .modal{
+      width:min(860px, 100%);
+      border:1px solid var(--border);
+      background:rgba(11,16,32,.92);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding:14px;
+      backdrop-filter: blur(10px);
+    }
+    .modalHeader{
+      display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+    }
+    .modalHeader h3{margin:0; font-size:14px}
+    .modalHeader p{margin:6px 0 0; color:var(--muted); font-size:12px}
+    .modalBody{margin-top:12px}
+    .modalFooter{display:flex; justify-content:flex-end; gap:10px; margin-top:12px; flex-wrap:wrap}
+    .twoCols{display:grid; grid-template-columns: 1fr 1fr; gap:12px}
+    .smallNote{font-size:12px; color:var(--muted)}
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .badge b{color:var(--ink)}
+    .loginWrap{
+      min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
+      padding:22px;
+    }
+    .loginCard{
+      width:min(520px, 100%);
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius:24px;
+      box-shadow: var(--shadow);
+      padding:16px;
+    }
+    .loginCard h2{margin:0;font-size:18px}
+    .loginCard p{margin:8px 0 0; color:var(--muted); font-size:13px}
+    .hint{
+      border:1px dashed rgba(255,255,255,.18);
+      background:rgba(255,255,255,.03);
+      border-radius:16px;
+      padding:10px 12px;
+      margin-top:12px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.5;
+    }
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr}
+      .sidebar{position:relative; height:auto}
+      .sidebar .foot{position:relative; left:auto; right:auto; bottom:auto; margin-top:12px}
+      .content{padding:16px 14px 90px}
+      .grid.kpis{grid-template-columns: repeat(2, minmax(0,1fr))}
+      .grid.twocol{grid-template-columns: 1fr}
+      .twoCols{grid-template-columns: 1fr}
+      .formRow,.formRow3{grid-template-columns: 1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="toastWrap" id="toasts"></div>
+
+  <!-- LOGIN -->
+  <div class="loginWrap" id="loginView">
+    <div class="loginCard">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="logo"></div>
+        <div>
+          <h2>Agency Admin — Control Tower</h2>
+          <p>Owner + Senior Managers. Multi-school dashboards, staff permissions, and operational oversight.</p>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Email</label>
+          <input class="input" id="loginEmail" placeholder="name@agency.com" autocomplete="username"/>
+        </div>
+        <div>
+          <label class="smallNote">Password</label>
+          <input class="input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+        </div>
+      </div>
+
+      <div class="formActions">
+        <button class="btn primary" id="btnLogin">Login</button>
+        <button class="btn" id="btnForgot">Forgot Password</button>
+      </div>
+
+      <div class="hint">
+        <b style="color:var(--ink)">Setup note</b>
+        This file uses Firebase Auth + Firestore. Paste your Firebase config in the code (search for <span style="font-family:var(--mono)">FIREBASE_CONFIG_HERE</span>).
+        <br/><br/>
+        Access is controlled via staff docs:
+        <div style="font-family:var(--mono); margin-top:8px; white-space:pre-wrap;">agencies/{agencyId}/staff/{uid} → { role, schools: ["schoolId1","schoolId2"], active:true }</div>
+        The first owner can be bootstrapped by creating their staff doc once (or temporarily enabling owner bootstrap in Settings tab).
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="smallNote">
+        Powered by <b style="color:var(--ink)">Luma</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="app hide" id="appView">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div style="min-width:0">
+          <h1 id="agencyName">Senior Uniform Agency</h1>
+          <p id="agencyMeta">Admin Control Tower</p>
+        </div>
+      </div>
+
+      <div class="nav" id="nav">
+        <button data-tab="overview" class="active"><span>Overview</span><span class="chip" id="chipSchools">0 Schools</span></button>
+        <button data-tab="schools"><span>Schools</span><span class="chip">Setup</span></button>
+        <button data-tab="staff"><span>Staff & Permissions</span><span class="chip">Roles</span></button>
+        <button data-tab="alerts"><span>What to Fix</span><span class="chip" id="chipAlerts">0</span></button>
+        <button data-tab="settings"><span>Agency Settings</span><span class="chip">Config</span></button>
+        <button data-tab="audit"><span>Audit Log</span><span class="chip">History</span></button>
+      </div>
+
+      <div class="foot">
+        <div class="mini">
+          <div style="font-weight:800;color:var(--ink)" id="meName">—</div>
+          <div id="meRole">—</div>
+        </div>
+        <button class="btn small" id="btnLogout">Logout</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="topbar">
+        <div class="title">
+          <h2 id="pageTitle">Overview</h2>
+          <p id="pageSub">Cross-school KPIs, trends, and bottleneck detection.</p>
+        </div>
+        <div class="pillrow">
+          <div class="pill"><span class="dot info" style="width:10px;height:10px;border-radius:50%;background:var(--accent)"></span><b id="pillAgencyId">agency: —</b></div>
+          <div class="pill"><span>Time</span><b id="pillNow">—</b></div>
+          <button class="btn primary" id="btnRefresh">Refresh</button>
+        </div>
+      </div>
+
+      <!-- OVERVIEW -->
+      <section id="tab-overview">
+        <div class="grid kpis">
+          <div class="card">
+            <h3>Commitment</h3>
+            <div class="sub">Across all assigned schools</div>
+            <div class="kpiVal" id="kpiCommit">—</div>
+            <div class="kpiMeta"><span id="kpiCommitMeta">—</span><span class="badge"><b id="kpiCommitTrend">—</b></span></div>
+          </div>
+          <div class="card">
+            <h3>Paid</h3>
+            <div class="sub">Min % achieved vs deadlines</div>
+            <div class="kpiVal" id="kpiPaid">—</div>
+            <div class="kpiMeta"><span id="kpiPaidMeta">—</span><span class="badge"><b id="kpiPaidTrend">—</b></span></div>
+          </div>
+          <div class="card">
+            <h3>Ordered</h3>
+            <div class="sub">Orders submitted (not just committed)</div>
+            <div class="kpiVal" id="kpiOrdered">—</div>
+            <div class="kpiMeta"><span id="kpiOrderedMeta">—</span><span class="badge"><b id="kpiOrderedTrend">—</b></span></div>
+          </div>
+          <div class="card">
+            <h3>Size Locked</h3>
+            <div class="sub">Readiness for production start</div>
+            <div class="kpiVal" id="kpiLocked">—</div>
+            <div class="kpiMeta"><span id="kpiLockedMeta">—</span><span class="badge"><b id="kpiLockedTrend">—</b></span></div>
+          </div>
+        </div>
+
+        <div class="grid twocol" style="margin-top:14px">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+              <div>
+                <h3>Cross-school trends</h3>
+                <div class="sub">Daily snapshot (last 14 days): Commitment / Paid / Ordered / Locked</div>
+              </div>
+              <div class="actions">
+                <button class="btn small" id="btnSeedSnapshots">Seed demo snapshots</button>
+                <button class="btn small" id="btnClearSnapshots">Clear snapshots</button>
+              </div>
+            </div>
+            <div style="margin-top:10px">
+              <canvas id="chartTrends" height="120"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Top bottlenecks</h3>
+            <div class="sub">Auto-detected blockers across assigned schools</div>
+            <div class="hr"></div>
+            <div id="bottlenecks"></div>
+            <div class="hr"></div>
+            <div class="smallNote">Tip: Click a bottleneck to open the school and suggested action.</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <h3>Schools at a glance</h3>
+              <div class="sub">Isolation by school workspace. Your access is limited by your staff assignment.</div>
+            </div>
+            <div class="actions">
+              <button class="btn small" id="btnOpenCreateSchool">Create school</button>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>School</th>
+                <th>Timeline</th>
+                <th>Deadlines</th>
+                <th class="right">Progress</th>
+                <th class="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="schoolsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SCHOOLS -->
+      <section id="tab-schools" class="hide">
+        <div class="grid" style="grid-template-columns: 1fr; gap:14px">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+              <div>
+                <h3>Schools</h3>
+                <div class="sub">Create and configure isolated school workspaces with timelines, deadlines, and size-lock date.</div>
+              </div>
+              <div class="actions">
+                <button class="btn primary" id="btnOpenCreateSchool2">Create school</button>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>School</th>
+                  <th>School ID</th>
+                  <th>Ordering</th>
+                  <th>Size edits until</th>
+                  <th class="right">Quick Actions</th>
+                </tr>
+              </thead>
+              <tbody id="schoolsTable2"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- STAFF -->
+      <section id="tab-staff" class="hide">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <h3>Staff & Permissions</h3>
+              <div class="sub">Role-based access with per-school assignment.</div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" id="btnOpenInviteStaff">Invite / Add staff</button>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Staff</th>
+                <th>Role</th>
+                <th>Schools</th>
+                <th>Status</th>
+                <th class="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="staffTable"></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3>Roles</h3>
+          <div class="sub">Simple & strong permissions model (locked blueprint).</div>
+          <div class="hr"></div>
+          <div class="grid" style="grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px" id="rolesGrid"></div>
+        </div>
+      </section>
+
+      <!-- ALERTS / WHAT TO FIX -->
+      <section id="tab-alerts" class="hide">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <h3>What to fix</h3>
+              <div class="sub">Actionable cards generated from live progress & deadlines per school.</div>
+            </div>
+            <div class="actions">
+              <button class="btn small" id="btnRecomputeAlerts">Recompute</button>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div id="alertsWrap" class="grid" style="grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px"></div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="tab-settings" class="hide">
+        <div class="card">
+          <h3>Agency Settings</h3>
+          <div class="sub">Configure agency identity and bootstrap options.</div>
+          <div class="hr"></div>
+
+          <div class="formRow3">
+            <div>
+              <label class="smallNote">Agency ID (stable)</label>
+              <input class="input" id="setAgencyId" placeholder="e.g. senior_agency_001"/>
+              <div class="smallNote" style="margin-top:6px">Stored in this browser (localStorage). Use one ID across all 3 apps.</div>
+            </div>
+            <div>
+              <label class="smallNote">Agency display name</label>
+              <input class="input" id="setAgencyName" placeholder="Senior Uniform Agency"/>
+            </div>
+            <div>
+              <label class="smallNote">Owner bootstrap (one-time)</label>
+              <select id="setBootstrap" class="input">
+                <option value="off">OFF (recommended)</option>
+                <option value="on">ON (temporary)</option>
+              </select>
+              <div class="smallNote" style="margin-top:6px">When ON, the first logged-in user can self-create an Owner staff doc if missing.</div>
+            </div>
+          </div>
+
+          <div class="formActions">
+            <button class="btn primary" id="btnSaveAgencySettings">Save settings</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3>Data model (for your dev team)</h3>
+          <div class="sub">Vendor-first style, but for multi-school uniforms. Everything is auto-created by the HTML apps.</div>
+          <div class="hr"></div>
+          <pre style="margin:0; white-space:pre-wrap; font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.5">
+agencies/{agencyId}
+  - name
+  - createdAt
+  - bootstrapOwner (bool)
+  - snapshotsEnabled (bool)
+
+agencies/{agencyId}/schools/{schoolId}
+  - name
+  - active
+  - createdAt
+  - orderingOpen (bool)
+  - sizeEditsUntil (timestamp)
+  - sizeLockDate (timestamp)  // the date after which sizes become read-only
+  - deadlines: [
+      { key:"d1", dueAt, minPct:25 },
+      { key:"d2", dueAt, minPct:50 },
+      { key:"d3", dueAt, minPct:75 },
+      { key:"d4", dueAt, minPct:100 }
+    ]
+  - percentSchedule: [25,25,25,25] // optional for UI
+  - timeline: { commitmentDueAt, orderingDueAt, productionStartAt, deliveryDueAt } // optional
+
+agencies/{agencyId}/schools/{schoolId}/students/{studentId}
+  - fullName
+  - phone
+  - grade
+  - committedAt (timestamp|null)
+  - approvedAt (timestamp|null)
+  - paidPct (number 0..100)
+  - paymentStatus ("none"|"pending"|"approved"|"rejected")
+  - orderedAt (timestamp|null)
+  - sizesLocked (bool)
+  - blocked (bool)
+  - blockReason (string|null)
+  - updatedAt
+
+agencies/{agencyId}/schools/{schoolId}/snapshots/{YYYY-MM-DD}
+  - commitmentPct, paidPct, orderedPct, lockedPct
+
+agencies/{agencyId}/staff/{uid}
+  - fullName
+  - email
+  - role ("owner"|"finance"|"ops"|"product"|"warehouse"|"viewer")
+  - schools: ["schoolId1", ...] or ["*"] for all
+  - active (bool)
+  - createdAt
+
+agencies/{agencyId}/audit/{autoId}
+  - at, actorUid, actorName, action, payload
+          </pre>
+        </div>
+      </section>
+
+      <!-- AUDIT -->
+      <section id="tab-audit" class="hide">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+            <div>
+              <h3>Audit log</h3>
+              <div class="sub">Key actions across schools (deadlines changes, size locks, staff edits, etc.).</div>
+            </div>
+            <div class="actions">
+              <button class="btn small" id="btnLoadAudit">Load latest</button>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="auditTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div style="position:fixed; left:0; right:0; bottom:0; padding:10px 14px; display:flex; justify-content:center; pointer-events:none;">
+        <div style="pointer-events:auto; border:1px solid var(--border); background:rgba(255,255,255,.04); padding:10px 14px; border-radius:999px; font-size:12px; color:var(--muted);">
+          Powered by <b style="color:var(--ink)">Luma</b>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modalBackdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modalHeader">
+        <div>
+          <h3 id="modalTitle">—</h3>
+          <p id="modalSub">—</p>
+        </div>
+        <button class="btn small" id="modalClose">Close</button>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+      <div class="modalFooter" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    /******************************************************************
+     *  Senior Uniform Agency — agency-admin.html (single file)
+     *  - Firebase Auth + Firestore
+     *  - Multi-school isolation under agencies/{agencyId}/schools/{schoolId}
+     *  - Role + per-school access under agencies/{agencyId}/staff/{uid}
+     ******************************************************************/
+
+    // =========================
+    // 1) FIREBASE CONFIG (PASTE YOURS)
+    // =========================
+    const firebaseConfig = /* FIREBASE_CONFIG_HERE */ {
+      // apiKey: "...",
+      // authDomain: "...",
+      // projectId: "...",
+      // storageBucket: "...",
+      // messagingSenderId: "...",
+      // appId: "..."
+    };
+
+    // =========================
+    // 2) Imports
+    // =========================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged,
+      signInWithEmailAndPassword, sendPasswordResetEmail, signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc, addDoc,
+      collection, query, where, getDocs, orderBy, limit,
+      serverTimestamp, Timestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    // =========================
+    // 3) App init
+    // =========================
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // =========================
+    // 4) UI helpers
+    // =========================
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>Array.from(document.querySelectorAll(s));
+    const fmtPct = (n)=> (isFinite(n) ? `${Math.round(n)}%` : "—");
+    const fmtDate = (ts)=>{
+      if(!ts) return "—";
+      const d = ts instanceof Timestamp ? ts.toDate() : (ts.toDate ? ts.toDate() : new Date(ts));
+      return d.toLocaleString(undefined, {year:"numeric", month:"short", day:"2-digit"});
+    };
+    const fmtDateTime = (ts)=>{
+      if(!ts) return "—";
+      const d = ts instanceof Timestamp ? ts.toDate() : (ts.toDate ? ts.toDate() : new Date(ts));
+      return d.toLocaleString(undefined, {year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit"});
+    };
+    const todayKey = ()=>{
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,"0");
+      const da = String(d.getDate()).padStart(2,"0");
+      return `${y}-${m}-${da}`;
+    };
+    function toast(title, msg){
+      const wrap = $("#toasts");
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.innerHTML = `<b>${esc(title)}</b><span>${esc(msg||"")}</span>`;
+      wrap.appendChild(el);
+      setTimeout(()=>{ el.style.opacity="0"; el.style.transform="translateY(-4px)"; el.style.transition=".25s"; }, 3300);
+      setTimeout(()=>{ el.remove(); }, 3800);
+    }
+    function esc(s){
+      return String(s ?? "").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    }
+    function openModal({title, sub, bodyHTML, footerHTML}){
+      $("#modalTitle").textContent = title || "—";
+      $("#modalSub").textContent = sub || "";
+      $("#modalBody").innerHTML = bodyHTML || "";
+      $("#modalFooter").innerHTML = footerHTML || "";
+      $("#modalBackdrop").style.display = "flex";
+    }
+    function closeModal(){ $("#modalBackdrop").style.display="none"; }
+    $("#modalClose").addEventListener("click", closeModal);
+    $("#modalBackdrop").addEventListener("click", (e)=>{ if(e.target.id==="modalBackdrop") closeModal(); });
+
+    // =========================
+    // 5) State
+    // =========================
+    const ROLES = [
+      {key:"owner", name:"Owner", desc:"Everything across all schools."},
+      {key:"finance", name:"Finance Approver", desc:"Approve/reject payments only."},
+      {key:"ops", name:"Ops Manager", desc:"Deadlines, blocks, overrides, student status."},
+      {key:"product", name:"Product Manager", desc:"Products, size charts, name settings."},
+      {key:"warehouse", name:"Warehouse", desc:"Packing + delivery screens only."},
+      {key:"viewer", name:"Viewer", desc:"Read-only access."},
+    ];
+
+    const state = {
+      uid:null,
+      me:null,
+      agencyId: localStorage.getItem("SUA_AGENCY_ID") || "senior_agency",
+      agency:null,
+      schools:[],
+      staff:[],
+      alerts:[],
+      trendsChart:null
+    };
+
+    // =========================
+    // 6) DOM refs
+    // =========================
+    const loginView = $("#loginView");
+    const appView = $("#appView");
+
+    // =========================
+    // 7) Auth handlers
+    // =========================
+    $("#btnLogin").addEventListener("click", async ()=>{
+      const email = $("#loginEmail").value.trim();
+      const pass = $("#loginPass").value;
+      if(!email || !pass) return toast("Missing", "Enter email + password.");
+      try{
+        await signInWithEmailAndPassword(auth, email, pass);
+      }catch(e){
+        toast("Login failed", e?.message || "Try again.");
+      }
+    });
+
+    $("#btnForgot").addEventListener("click", async ()=>{
+      const email = $("#loginEmail").value.trim();
+      if(!email) return toast("Missing", "Enter your email first.");
+      try{
+        await sendPasswordResetEmail(auth, email);
+        toast("Email sent", "Check your inbox for reset link.");
+      }catch(e){
+        toast("Error", e?.message || "Could not send reset email.");
+      }
+    });
+
+    $("#btnLogout").addEventListener("click", async ()=>{
+      await signOut(auth);
+    });
+
+    // =========================
+    // 8) Navigation
+    // =========================
+    $$("#nav button").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        $$("#nav button").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        showTab(tab);
+      });
+    });
+
+    function showTab(tab){
+      const map = {
+        overview: {title:"Overview", sub:"Cross-school KPIs, trends, and bottleneck detection."},
+        schools: {title:"Schools", sub:"Create and configure isolated school workspaces."},
+        staff: {title:"Staff & Permissions", sub:"Role-based access with per-school assignment."},
+        alerts: {title:"What to Fix", sub:"Actionable cards generated from live progress & deadlines per school."},
+        settings: {title:"Agency Settings", sub:"Agency identity, bootstrap, and data model."},
+        audit: {title:"Audit Log", sub:"Key actions across schools (history)." }
+      };
+      Object.keys(map).forEach(k=>{
+        const sec = $("#tab-"+k);
+        if(sec) sec.classList.toggle("hide", k!==tab);
+      });
+      $("#pageTitle").textContent = map[tab]?.title || "—";
+      $("#pageSub").textContent = map[tab]?.sub || "";
+    }
+
+    // =========================
+    // 9) Core data helpers
+    // =========================
+    const agencyRef = ()=> doc(db, "agencies", state.agencyId);
+    const staffRef = (uid)=> doc(db, "agencies", state.agencyId, "staff", uid);
+    const schoolsCol = ()=> collection(db, "agencies", state.agencyId, "schools");
+    const staffCol = ()=> collection(db, "agencies", state.agencyId, "staff");
+    const auditCol = ()=> collection(db, "agencies", state.agencyId, "audit");
+    const schoolRef = (schoolId)=> doc(db, "agencies", state.agencyId, "schools", schoolId);
+    const studentsCol = (schoolId)=> collection(db, "agencies", state.agencyId, "schools", schoolId, "students");
+    const snapshotsCol = (schoolId)=> collection(db, "agencies", state.agencyId, "schools", schoolId, "snapshots");
+
+    function hasSchoolAccess(schoolId){
+      if(!state.me) return false;
+      if(state.me.role==="owner") return true;
+      const schools = state.me.schools || [];
+      return schools.includes("*") || schools.includes(schoolId);
+    }
+
+    async function ensureAgencyDoc(){
+      const ref = agencyRef();
+      const snap = await getDoc(ref);
+      if(!snap.exists()){
+        await setDoc(ref, {
+          name: "Senior Uniform Agency",
+          createdAt: serverTimestamp(),
+          bootstrapOwner: false,
+          snapshotsEnabled: true
+        }, {merge:true});
+      }
+      state.agency = (await getDoc(ref)).data();
+      $("#agencyName").textContent = state.agency?.name || "Senior Uniform Agency";
+      $("#setAgencyName").value = state.agency?.name || "Senior Uniform Agency";
+      $("#setBootstrap").value = state.agency?.bootstrapOwner ? "on" : "off";
+      $("#pillAgencyId").textContent = `agency: ${state.agencyId}`;
+    }
+
+    async function loadMe(uid){
+      const ref = staffRef(uid);
+      const snap = await getDoc(ref);
+
+      // Optional bootstrap (temporary): let first user become owner if missing and bootstrapOwner is enabled
+      if(!snap.exists()){
+        const agencySnap = await getDoc(agencyRef());
+        const agency = agencySnap.exists() ? agencySnap.data() : {};
+        if(agency?.bootstrapOwner){
+          await setDoc(ref, {
+            fullName: auth.currentUser?.displayName || (auth.currentUser?.email || "Owner"),
+            email: auth.currentUser?.email || "",
+            role: "owner",
+            schools: ["*"],
+            active: true,
+            createdAt: serverTimestamp()
+          }, {merge:true});
+          await addAudit("bootstrap_owner", {uid});
+        }
+      }
+
+      const snap2 = await getDoc(ref);
+      if(!snap2.exists()) return null;
+      return { uid, ...snap2.data() };
+    }
+
+    async function addAudit(action, payload={}){
+      try{
+        await addDoc(auditCol(), {
+          at: serverTimestamp(),
+          actorUid: state.uid || null,
+          actorName: state.me?.fullName || state.me?.email || "—",
+          action,
+          payload
+        });
+      }catch(e){
+        // audit must not break the app
+      }
+    }
+
+    async function loadSchools(){
+      const qy = query(schoolsCol(), orderBy("createdAt","desc"));
+      const snap = await getDocs(qy);
+      const all = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      state.schools = all.filter(s=>hasSchoolAccess(s.id));
+      $("#chipSchools").textContent = `${state.schools.length} Schools`;
+      renderSchoolsTables();
+    }
+
+    async function loadStaff(){
+      const qy = query(staffCol(), orderBy("createdAt","desc"));
+      const snap = await getDocs(qy);
+      state.staff = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderStaff();
+    }
+
+    // =========================
+    // 10) KPIs & Alerts Computation
+    // =========================
+    async function computeSchoolProgress(school){
+      // Minimal & safe aggregation (reads students docs).
+      // You can later replace with Cloud Functions rollups if you want, but this works HTML-only.
+      const sid = school.id;
+      const snap = await getDocs(query(studentsCol(sid), limit(700))); // adjust if needed
+      const students = snap.docs.map(d=>d.data());
+
+      const total = students.length || 0;
+      const committed = students.filter(s=>!!s.committedAt).length;
+      const paidOk = students.filter(s=>Number(s.paidPct||0) >= 25).length; // baseline, real due checks below
+      const ordered = students.filter(s=>!!s.orderedAt).length;
+      const locked = students.filter(s=>!!s.sizesLocked).length;
+      const blocked = students.filter(s=>!!s.blocked).length;
+
+      // deadline checks
+      const now = new Date();
+      const deadlines = Array.isArray(school.deadlines) ? school.deadlines : defaultDeadlines();
+      const missedByDeadline = deadlines.map(d=>{
+        const due = d?.dueAt?.toDate ? d.dueAt.toDate() : (d?.dueAt ? new Date(d.dueAt) : null);
+        if(!due || now <= due) return { key:d.key, dueAt:d.dueAt, minPct:d.minPct, missed:0, total };
+        const missed = students.filter(s=>{
+          const pct = Number(s.paidPct||0);
+          return pct < Number(d.minPct||0);
+        }).length;
+        return { key:d.key, dueAt:d.dueAt, minPct:d.minPct, missed, total };
+      });
+
+      const commitmentPct = total? (committed/total*100) : 0;
+      const paidPct = total? (students.reduce((a,s)=>a+Number(s.paidPct||0),0)/(total*100)*100) : 0; // average paid %
+      const orderedPct = total? (ordered/total*100) : 0;
+      const lockedPct = total? (locked/total*100) : 0;
+
+      // production readiness heuristic
+      const sizeLockDate = school.sizeLockDate?.toDate ? school.sizeLockDate.toDate() : (school.sizeLockDate ? new Date(school.sizeLockDate) : null);
+      const sizesLockedYet = sizeLockDate ? (now >= sizeLockDate) : false;
+
+      return {
+        total, committed, paidOk, ordered, locked, blocked,
+        commitmentPct, paidPctAvg: (total? students.reduce((a,s)=>a+Number(s.paidPct||0),0)/total : 0),
+        orderedPct, lockedPct,
+        missedByDeadline,
+        sizesLockedYet
+      };
+    }
+
+    function defaultDeadlines(){
+      // Placeholder defaults (user will configure per school)
+      const base = new Date();
+      const addDays = (d)=> new Date(base.getTime()+d*24*3600*1000);
+      return [
+        {key:"d1", dueAt: Timestamp.fromDate(addDays(7)), minPct:25},
+        {key:"d2", dueAt: Timestamp.fromDate(addDays(14)), minPct:50},
+        {key:"d3", dueAt: Timestamp.fromDate(addDays(21)), minPct:75},
+        {key:"d4", dueAt: Timestamp.fromDate(addDays(28)), minPct:100},
+      ];
+    }
+
+    async function refreshAll(){
+      $("#btnRefresh").disabled = true;
+      try{
+        await ensureAgencyDoc();
+        await loadSchools();
+        await loadStaff();
+        renderRoles();
+
+        // Compute cross-school KPIs
+        const progresses = [];
+        for(const s of state.schools){
+          progresses.push({school:s, prog: await computeSchoolProgress(s)});
+        }
+
+        // Aggregate KPIs
+        const totalStudents = progresses.reduce((a,x)=>a + (x.prog.total||0), 0);
+        const committed = progresses.reduce((a,x)=>a + (x.prog.committed||0), 0);
+        const ordered = progresses.reduce((a,x)=>a + (x.prog.ordered||0), 0);
+        const locked = progresses.reduce((a,x)=>a + (x.prog.locked||0), 0);
+        const avgPaidPct = totalStudents
+          ? (progresses.reduce((a,x)=>a + (x.prog.paidPctAvg||0)*(x.prog.total||0), 0) / totalStudents)
+          : 0;
+
+        const commitmentPct = totalStudents ? (committed/totalStudents*100) : 0;
+        const orderedPct = totalStudents ? (ordered/totalStudents*100) : 0;
+        const lockedPct = totalStudents ? (locked/totalStudents*100) : 0;
+
+        $("#kpiCommit").textContent = fmtPct(commitmentPct);
+        $("#kpiCommitMeta").textContent = `${committed}/${totalStudents} students committed`;
+        $("#kpiPaid").textContent = fmtPct(avgPaidPct);
+        $("#kpiPaidMeta").textContent = `Avg paid % across students`;
+        $("#kpiOrdered").textContent = fmtPct(orderedPct);
+        $("#kpiOrderedMeta").textContent = `${ordered}/${totalStudents} placed orders`;
+        $("#kpiLocked").textContent = fmtPct(lockedPct);
+        $("#kpiLockedMeta").textContent = `${locked}/${totalStudents} sizes locked`;
+
+        // Trends (simple: compare with yesterday snapshot if exists)
+        const snapKey = todayKey();
+        const prevKey = (()=>{ const d=new Date(); d.setDate(d.getDate()-1); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,"0"); const da=String(d.getDate()).padStart(2,"0"); return `${y}-${m}-${da}`; })();
+        const prev = await loadCrossSnapshot(prevKey);
+        const trend = (curr, prevv)=>{
+          if(prevv==null) return "—";
+          const delta = curr - prevv;
+          const sign = delta>=0 ? "+" : "";
+          return `${sign}${Math.round(delta)}% vs yesterday`;
+        };
+        $("#kpiCommitTrend").textContent = trend(commitmentPct, prev?.commitmentPct);
+        $("#kpiPaidTrend").textContent = trend(avgPaidPct, prev?.paidPct);
+        $("#kpiOrderedTrend").textContent = trend(orderedPct, prev?.orderedPct);
+        $("#kpiLockedTrend").textContent = trend(lockedPct, prev?.lockedPct);
+
+        // Save today snapshot (cross-school) if enabled
+        if(state.agency?.snapshotsEnabled){
+          await saveCrossSnapshot(snapKey, {commitmentPct, paidPct: avgPaidPct, orderedPct, lockedPct});
+        }
+
+        // Bottlenecks
+        renderBottlenecks(progresses);
+
+        // Alerts
+        state.alerts = buildAlerts(progresses);
+        $("#chipAlerts").textContent = String(state.alerts.length);
+        renderAlerts();
+
+        // Trends chart
+        await renderTrendsChart();
+
+        toast("Updated", "Dashboard refreshed.");
+      }catch(e){
+        toast("Refresh failed", e?.message || "Unexpected error.");
+        console.error(e);
+      }finally{
+        $("#btnRefresh").disabled = false;
+      }
+    }
+
+    async function saveCrossSnapshot(key, data){
+      // store under agencies/{agencyId}/snapshots/{key}
+      try{
+        const ref = doc(db, "agencies", state.agencyId, "snapshots", key);
+        await setDoc(ref, {...data, at: serverTimestamp()}, {merge:true});
+      }catch(e){}
+    }
+    async function loadCrossSnapshot(key){
+      try{
+        const ref = doc(db, "agencies", state.agencyId, "snapshots", key);
+        const snap = await getDoc(ref);
+        return snap.exists() ? snap.data() : null;
+      }catch(e){ return null; }
+    }
+
+    async function getCrossSnapshotsLast14(){
+      const snaps = await getDocs(query(collection(db,"agencies",state.agencyId,"snapshots"), orderBy("at","desc"), limit(14)));
+      const rows = snaps.docs.map(d=>({id:d.id, ...d.data()}))
+        .filter(r=>r.commitmentPct!=null)
+        .sort((a,b)=> String(a.id).localeCompare(String(b.id)));
+      return rows;
+    }
+
+    function buildAlerts(progresses){
+      const alerts = [];
+      for(const {school, prog} of progresses){
+        // Payment risk: missed any deadline
+        const misses = prog.missedByDeadline.filter(m=>m.missed>0);
+        if(misses.length){
+          const worst = misses.sort((a,b)=>b.missed-a.missed)[0];
+          const pctMissed = prog.total ? (worst.missed/prog.total*100) : 0;
+          alerts.push({
+            type:"payment",
+            sev: pctMissed>=35 ? "danger" : "warn",
+            schoolId: school.id,
+            title:`Payment risk: ${Math.round(pctMissed)}% missed ${worst.key.toUpperCase()} (min ${worst.minPct}%)`,
+            desc:`${worst.missed}/${prog.total} students are below ${worst.minPct}% after the deadline. Suggested: send reminder + keep blocked until approved.`,
+            actions:[
+              {label:"Send reminder", fn:"remindPayments"},
+              {label:"Extend deadline", fn:"extendDeadline", key: worst.key},
+              {label:"Open school", fn:"openSchool"}
+            ]
+          });
+        }
+
+        // Order risk: committed but not ordered
+        if(prog.total && prog.committed>0){
+          const committedNotOrdered = prog.committed - prog.ordered;
+          const pct = prog.committed ? (committedNotOrdered/prog.committed*100) : 0;
+          if(pct >= 25){
+            alerts.push({
+              type:"order",
+              sev: pct>=45 ? "danger" : "warn",
+              schoolId: school.id,
+              title:`Order risk: ${Math.round(pct)}% committed but not ordered`,
+              desc:`${committedNotOrdered}/${prog.committed} committed students haven't placed orders yet. Suggested: open ordering window + clarify sizes/items.`,
+              actions:[
+                {label:"Open ordering", fn:"toggleOrdering", value:true},
+                {label:"Send reminder", fn:"remindOrdering"},
+                {label:"Open school", fn:"openSchool"}
+              ]
+            });
+          }
+        }
+
+        // Production readiness: sizes not locked yet (date in future or low locked %)
+        const sizeLockDate = school.sizeLockDate || school.sizeEditsUntil;
+        const sizeLockDateStr = fmtDate(sizeLockDate);
+        if(!prog.sizesLockedYet || prog.lockedPct < 80){
+          alerts.push({
+            type:"prod",
+            sev: (prog.lockedPct < 50) ? "danger" : "warn",
+            schoolId: school.id,
+            title:`Production readiness: sizes not locked`,
+            desc:`Sizes locked ${Math.round(prog.lockedPct)}%. Size-lock date: ${sizeLockDateStr}. Cannot start production until sizes are locked.`,
+            actions:[
+              {label:"Lock sizes now", fn:"lockSizesNow"},
+              {label:"Set size-lock date", fn:"setSizeLockDate"},
+              {label:"Open school", fn:"openSchool"}
+            ]
+          });
+        }
+
+        // Bottleneck: blocked students
+        if(prog.blocked > 0){
+          alerts.push({
+            type:"block",
+            sev: prog.blocked>=10 ? "warn" : "info",
+            schoolId: school.id,
+            title:`Blocked students: ${prog.blocked}`,
+            desc:`Students are blocked (missed deadline / pending approvals). Suggested: review payment approvals + overrides.`,
+            actions:[
+              {label:"Open school", fn:"openSchool"},
+              {label:"Send reminder", fn:"remindPayments"}
+            ]
+          });
+        }
+      }
+
+      // Top 3 blockers per school (already captured above, but keep list manageable)
+      alerts.sort((a,b)=> sevRank(b.sev)-sevRank(a.sev));
+      return alerts.slice(0, 24);
+    }
+
+    function sevRank(sev){
+      return ({danger:3, warn:2, info:1})[sev] || 0;
+    }
+
+    function renderBottlenecks(progresses){
+      const items = [];
+      for(const {school, prog} of progresses){
+        const sid = school.id;
+        const misses = prog.missedByDeadline.filter(m=>m.missed>0);
+        if(misses.length){
+          const worst = misses.sort((a,b)=>b.missed-a.missed)[0];
+          items.push({schoolId:sid, schoolName:school.name||sid, sev:"danger", label:`Missed ${worst.key.toUpperCase()}: ${worst.missed}/${prog.total} below ${worst.minPct}%`});
+        }
+        const committedNotOrdered = prog.committed - prog.ordered;
+        if(committedNotOrdered>0){
+          items.push({schoolId:sid, schoolName:school.name||sid, sev:"warn", label:`Committed not ordered: ${committedNotOrdered}/${prog.committed}`});
+        }
+        if(prog.lockedPct<80){
+          items.push({schoolId:sid, schoolName:school.name||sid, sev:"warn", label:`Sizes locked: ${Math.round(prog.lockedPct)}%`});
+        }
+      }
+      items.sort((a,b)=> sevRank(b.sev)-sevRank(a.sev));
+      const top = items.slice(0, 8);
+
+      const wrap = $("#bottlenecks");
+      if(!top.length){
+        wrap.innerHTML = `<div class="smallNote">No major bottlenecks detected. Nice.</div>`;
+        return;
+      }
+      wrap.innerHTML = top.map(x=>`
+        <div class="card" style="padding:12px; margin-bottom:10px; cursor:pointer" data-school="${esc(x.schoolId)}">
+          <div class="tag"><span class="dot ${x.sev==='danger'?'danger':(x.sev==='warn'?'warn':'info')}"></span><span>${esc(x.schoolName)}</span></div>
+          <div style="margin-top:10px; font-weight:800">${esc(x.label)}</div>
+          <div class="smallNote" style="margin-top:6px">Click to open school actions</div>
+        </div>
+      `).join("");
+      wrap.querySelectorAll("[data-school]").forEach(el=>{
+        el.addEventListener("click", ()=> openSchoolActions(el.getAttribute("data-school")));
+      });
+    }
+
+    function renderAlerts(){
+      const wrap = $("#alertsWrap");
+      const alerts = state.alerts || [];
+      wrap.innerHTML = alerts.map((a, idx)=>{
+        const color = a.sev==="danger" ? "var(--danger)" : (a.sev==="warn" ? "var(--warn)" : "var(--accent)");
+        return `
+          <div class="card" style="border-color:${color}; background: rgba(255,255,255,.04)">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+              <div>
+                <div class="tag"><span class="dot ${a.sev==='danger'?'danger':(a.sev==='warn'?'warn':'info')}"></span><span>${esc(a.schoolId)}</span></div>
+                <div style="margin-top:10px; font-weight:900; letter-spacing:-.2px">${esc(a.title)}</div>
+                <div class="smallNote" style="margin-top:6px">${esc(a.desc)}</div>
+              </div>
+              <div class="badge"><b>${esc(a.type.toUpperCase())}</b></div>
+            </div>
+            <div class="hr"></div>
+            <div class="actions">
+              ${(a.actions||[]).map((ac)=>`<button class="btn small ${a.sev==='danger'?'danger':''}" data-idx="${idx}" data-fn="${esc(ac.fn)}" data-key="${esc(ac.key||"")}" data-val="${esc(ac.value??"")}">${esc(ac.label)}</button>`).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      wrap.querySelectorAll("button[data-idx]").forEach(btn=>{
+        btn.addEventListener("click", ()=> handleAlertAction(Number(btn.dataset.idx), btn.dataset.fn, btn.dataset.key, btn.dataset.val));
+      });
+    }
+
+    async function handleAlertAction(alertIdx, fn, key, val){
+      const a = state.alerts[alertIdx];
+      if(!a) return;
+      const schoolId = a.schoolId;
+
+      if(fn==="openSchool"){ openSchoolActions(schoolId); return; }
+
+      if(fn==="toggleOrdering"){
+        const desired = String(val)==="true";
+        await updateDoc(schoolRef(schoolId), { orderingOpen: desired, updatedAt: serverTimestamp() });
+        await addAudit("toggle_ordering", {schoolId, orderingOpen: desired});
+        toast("Updated", `Ordering ${desired?"opened":"closed"} for ${schoolId}`);
+        await refreshAll();
+        return;
+      }
+
+      if(fn==="lockSizesNow"){
+        // set sizeLockDate to now and mark sizesLocked=true for students can be done in school-ops (here we just update date)
+        await updateDoc(schoolRef(schoolId), { sizeLockDate: Timestamp.fromDate(new Date()), updatedAt: serverTimestamp() });
+        await addAudit("lock_sizes_now", {schoolId});
+        toast("Updated", `Size-lock date set to now for ${schoolId}`);
+        await refreshAll();
+        return;
+      }
+
+      if(fn==="setSizeLockDate"){
+        openModal({
+          title:`Set size-lock date — ${schoolId}`,
+          sub:"After this date, students cannot edit sizes (read-only).",
+          bodyHTML: `
+            <div class="formRow">
+              <div>
+                <label class="smallNote">Size edits allowed until (date)</label>
+                <input class="input" id="mSizeLock" type="date"/>
+              </div>
+              <div>
+                <label class="smallNote">Ordering window</label>
+                <select class="input" id="mOrdering">
+                  <option value="true">Open</option>
+                  <option value="false">Closed</option>
+                </select>
+              </div>
+            </div>
+            <div class="smallNote" style="margin-top:8px">Note: school-ops will enforce per-student read-only after this date.</div>
+          `,
+          footerHTML: `
+            <button class="btn" id="mCancel">Cancel</button>
+            <button class="btn primary" id="mSave">Save</button>
+          `
+        });
+        $("#mCancel").onclick = closeModal;
+        $("#mSave").onclick = async ()=>{
+          const d = $("#mSizeLock").value;
+          const ordering = $("#mOrdering").value === "true";
+          if(!d) return toast("Missing", "Pick a date.");
+          const dt = new Date(d+"T00:00:00");
+          await updateDoc(schoolRef(schoolId), { sizeLockDate: Timestamp.fromDate(dt), orderingOpen: ordering, updatedAt: serverTimestamp() });
+          await addAudit("set_size_lock_date", {schoolId, sizeLockDate: d, orderingOpen: ordering});
+          closeModal();
+          toast("Saved", "School settings updated.");
+          await refreshAll();
+        };
+        return;
+      }
+
+      if(fn==="extendDeadline"){
+        openModal({
+          title:`Extend deadline — ${schoolId}`,
+          sub:`Choose a new due date for ${key.toUpperCase()} (keeps same required %).`,
+          bodyHTML: `
+            <div class="formRow">
+              <div>
+                <label class="smallNote">Deadline key</label>
+                <input class="input" value="${esc(key)}" disabled/>
+              </div>
+              <div>
+                <label class="smallNote">New due date</label>
+                <input class="input" id="mNewDue" type="date"/>
+              </div>
+            </div>
+          `,
+          footerHTML: `
+            <button class="btn" id="mCancel">Cancel</button>
+            <button class="btn warn" id="mSave">Update</button>
+          `
+        });
+        $("#mCancel").onclick = closeModal;
+        $("#mSave").onclick = async ()=>{
+          const d = $("#mNewDue").value;
+          if(!d) return toast("Missing", "Pick a date.");
+          const dt = new Date(d+"T23:59:59");
+          const s = state.schools.find(x=>x.id===schoolId);
+          const deadlines = Array.isArray(s.deadlines) ? s.deadlines : defaultDeadlines();
+          const updated = deadlines.map(dd=>{
+            const k = dd.key || dd?.key;
+            if(k===key) return {...dd, dueAt: Timestamp.fromDate(dt)};
+            return dd;
+          });
+          await updateDoc(schoolRef(schoolId), {deadlines: updated, updatedAt: serverTimestamp()});
+          await addAudit("extend_deadline", {schoolId, key, newDue: d});
+          closeModal();
+          toast("Updated", `${key.toUpperCase()} extended.`);
+          await refreshAll();
+        };
+        return;
+      }
+
+      if(fn==="remindPayments" || fn==="remindOrdering"){
+        const s = state.schools.find(x=>x.id===schoolId);
+        const msg = fn==="remindPayments"
+          ? `Reminder: Please complete your required installment payment for ${s?.name||schoolId}. If your payment is pending approval, wait for confirmation.`
+          : `Reminder: Please complete your uniform order for ${s?.name||schoolId}. Ordering is time-sensitive based on the school timeline.`;
+        openModal({
+          title:`Send reminder — ${schoolId}`,
+          sub:"Copy the message below and send via WhatsApp / SMS / email. (School-ops can later automate reminders.)",
+          bodyHTML: `
+            <label class="smallNote">Message</label>
+            <textarea class="input" id="mMsg">${esc(msg)}</textarea>
+            <div class="smallNote" style="margin-top:8px">Tip: Add the deadline date and minimum % if needed.</div>
+          `,
+          footerHTML: `
+            <button class="btn" id="mCopy">Copy</button>
+            <button class="btn" id="mClose">Close</button>
+          `
+        });
+        $("#mCopy").onclick = async ()=>{
+          await navigator.clipboard.writeText($("#mMsg").value);
+          toast("Copied", "Reminder copied to clipboard.");
+        };
+        $("#mClose").onclick = closeModal;
+        return;
+      }
+
+      toast("Not implemented", "This action will be completed in school-ops automation.");
+    }
+
+    function openSchoolActions(schoolId){
+      const s = state.schools.find(x=>x.id===schoolId);
+      if(!s) return;
+      openModal({
+        title: `School workspace — ${s.name || s.id}`,
+        sub: `Quick controls (agency-level). Full operations live in school-ops.html.`,
+        bodyHTML: `
+          <div class="twoCols">
+            <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
+              <h3>Timeline & controls</h3>
+              <div class="sub">Ordering + size-lock configuration</div>
+              <div class="hr"></div>
+              <div class="formRow">
+                <div>
+                  <label class="smallNote">Ordering window</label>
+                  <select class="input" id="mOrdOpen">
+                    <option value="true">Open</option>
+                    <option value="false">Closed</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="smallNote">Size-lock date</label>
+                  <input class="input" id="mSizeDate" type="date"/>
+                </div>
+              </div>
+              <div class="formActions">
+                <button class="btn primary" id="mSaveSchool">Save</button>
+                <button class="btn danger" id="mLockNow">Lock sizes now</button>
+              </div>
+            </div>
+            <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
+              <h3>Suggested next actions</h3>
+              <div class="sub">Smart buttons (based on your blueprint)</div>
+              <div class="hr"></div>
+              <div class="actions" style="justify-content:flex-start">
+                <button class="btn small" id="mRemindPay">Send payment reminder</button>
+                <button class="btn small" id="mRemindOrd">Send ordering reminder</button>
+                <button class="btn small warn" id="mExtend">Extend a deadline</button>
+              </div>
+              <div class="hr"></div>
+              <div class="smallNote">
+                Launch school-ops.html for full operations, payment approvals, R/A/G boxes, warehouse tools, and enforcement.
+              </div>
+            </div>
+          </div>
+        `,
+        footerHTML: `
+          <button class="btn" id="mClose">Close</button>
+        `
+      });
+
+      // set initial values
+      $("#mOrdOpen").value = String(!!s.orderingOpen);
+      const d = s.sizeLockDate?.toDate ? s.sizeLockDate.toDate() : (s.sizeLockDate ? new Date(s.sizeLockDate) : null);
+      if(d){
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,"0");
+        const dd = String(d.getDate()).padStart(2,"0");
+        $("#mSizeDate").value = `${yyyy}-${mm}-${dd}`;
+      }
+
+      $("#mSaveSchool").onclick = async ()=>{
+        const orderingOpen = $("#mOrdOpen").value==="true";
+        const date = $("#mSizeDate").value;
+        const patch = { orderingOpen, updatedAt: serverTimestamp() };
+        if(date){
+          patch.sizeLockDate = Timestamp.fromDate(new Date(date+"T00:00:00"));
+        }
+        await updateDoc(schoolRef(s.id), patch);
+        await addAudit("school_quick_save", {schoolId:s.id, orderingOpen, sizeLockDate: date || null});
+        toast("Saved", "School updated.");
+        closeModal();
+        await refreshAll();
+      };
+      $("#mLockNow").onclick = async ()=>{
+        await updateDoc(schoolRef(s.id), { sizeLockDate: Timestamp.fromDate(new Date()), updatedAt: serverTimestamp() });
+        await addAudit("lock_sizes_now", {schoolId:s.id});
+        toast("Updated", "Size-lock date set to now.");
+        closeModal();
+        await refreshAll();
+      };
+      $("#mRemindPay").onclick = ()=> handleAlertAction(0, "remindPayments", "", "");
+      $("#mRemindOrd").onclick = ()=> handleAlertAction(0, "remindOrdering", "", "");
+      $("#mExtend").onclick = ()=> handleAlertAction(0, "extendDeadline", "d2", "");
+      $("#mClose").onclick = closeModal;
+    }
+
+    // =========================
+    // 11) Renderers
+    // =========================
+    function renderSchoolsTables(){
+      const tbody1 = $("#schoolsTable");
+      const tbody2 = $("#schoolsTable2");
+      const rows = state.schools.map(s=>{
+        const deadlines = (Array.isArray(s.deadlines) ? s.deadlines : defaultDeadlines());
+        const dl = deadlines.map(d=>`${(d.key||"").toUpperCase()}:${d.minPct}% (${fmtDate(d.dueAt)})`).join(" • ");
+        const sizeLock = fmtDate(s.sizeLockDate || s.sizeEditsUntil);
+        const ordering = s.orderingOpen ? `<span class="tag"><span class="dot ok"></span><span>Open</span></span>` : `<span class="tag"><span class="dot warn"></span><span>Closed</span></span>`;
+        return {s, dl, sizeLock, ordering};
+      });
+
+      tbody1.innerHTML = rows.map(({s, dl, sizeLock})=>`
+        <tr class="row">
+          <td>
+            <div class="strong">${esc(s.name||"Untitled school")}</div>
+            <div class="muted">School ID: <span class="mono">${esc(s.id)}</span></div>
+          </td>
+          <td>
+            <div class="muted">Size-lock: ${esc(sizeLock)}</div>
+            <div class="muted">Ordering: ${s.orderingOpen ? "Open":"Closed"}</div>
+          </td>
+          <td class="mono">${esc(dl || "—")}</td>
+          <td class="right"><span class="badge"><b>Live</b></span></td>
+          <td class="right">
+            <div class="actions">
+              <button class="btn small" data-open-school="${esc(s.id)}">Open</button>
+              <button class="btn small warn" data-edit-school="${esc(s.id)}">Edit</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      tbody2.innerHTML = rows.map(({s, dl, sizeLock, ordering})=>`
+        <tr class="row">
+          <td>
+            <div class="strong">${esc(s.name||"Untitled school")}</div>
+            <div class="muted">${esc(dl || "—")}</div>
+          </td>
+          <td class="mono">${esc(s.id)}</td>
+          <td>${ordering}</td>
+          <td>${esc(sizeLock)}</td>
+          <td class="right">
+            <div class="actions">
+              <button class="btn small" data-open-school="${esc(s.id)}">Open</button>
+              <button class="btn small primary" data-quick-open="${esc(s.id)}">Ordering ${s.orderingOpen ? "✓":"→"}</button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+
+      $$("button[data-open-school]").forEach(b=> b.addEventListener("click", ()=> openSchoolActions(b.dataset.openSchool)));
+      $$("button[data-edit-school]").forEach(b=> b.addEventListener("click", ()=> openEditSchool(b.dataset.editSchool)));
+      $$("button[data-quick-open]").forEach(b=> b.addEventListener("click", async ()=>{
+        const sid = b.dataset.quickOpen;
+        const s = state.schools.find(x=>x.id===sid);
+        const desired = !s.orderingOpen;
+        await updateDoc(schoolRef(sid), {orderingOpen: desired, updatedAt: serverTimestamp()});
+        await addAudit("toggle_ordering", {schoolId:sid, orderingOpen: desired});
+        toast("Updated", `Ordering ${desired?"opened":"closed"}.`);
+        await refreshAll();
+      }));
+    }
+
+    function renderStaff(){
+      const tbody = $("#staffTable");
+      const schoolName = (id)=> state.schools.find(s=>s.id===id)?.name || id;
+      tbody.innerHTML = state.staff.map(st=>{
+        const role = ROLES.find(r=>r.key===st.role)?.name || st.role || "—";
+        const schools = (st.schools||[]).includes("*") ? "All schools" : (st.schools||[]).map(s=>schoolName(s)).join(", ");
+        const active = st.active!==false;
+        return `
+          <tr class="row">
+            <td>
+              <div class="strong">${esc(st.fullName || st.email || st.id)}</div>
+              <div class="muted">${esc(st.email || "—")}</div>
+              <div class="mono">uid: ${esc(st.id)}</div>
+            </td>
+            <td><span class="badge"><b>${esc(role)}</b></span></td>
+            <td class="muted">${esc(schools || "—")}</td>
+            <td>${active ? `<span class="tag"><span class="dot ok"></span><span>Active</span></span>` : `<span class="tag"><span class="dot warn"></span><span>Disabled</span></span>`}</td>
+            <td class="right">
+              <div class="actions">
+                <button class="btn small" data-edit-staff="${esc(st.id)}">Edit</button>
+                <button class="btn small ${active?'danger':'good'}" data-toggle-staff="${esc(st.id)}">${active?'Disable':'Enable'}</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      $$("button[data-edit-staff]").forEach(b=> b.addEventListener("click", ()=> openEditStaff(b.dataset.editStaff)));
+      $$("button[data-toggle-staff]").forEach(b=> b.addEventListener("click", ()=> toggleStaffActive(b.dataset.toggleStaff)));
+    }
+
+    function renderRoles(){
+      const wrap = $("#rolesGrid");
+      wrap.innerHTML = ROLES.map(r=>`
+        <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
+          <div class="badge"><b>${esc(r.name)}</b></div>
+          <div class="smallNote" style="margin-top:8px">${esc(r.desc)}</div>
+        </div>
+      `).join("");
+    }
+
+    async function renderTrendsChart(){
+      const rows = await getCrossSnapshotsLast14();
+      const labels = rows.map(r=>r.id);
+      const series = (k)=> rows.map(r=> Number(r[k]||0));
+
+      const ctx = $("#chartTrends");
+      if(state.trendsChart) state.trendsChart.destroy();
+
+      state.trendsChart = new Chart(ctx, {
+        type:"line",
+        data:{
+          labels,
+          datasets:[
+            {label:"Commitment %", data: series("commitmentPct")},
+            {label:"Paid % (avg)", data: series("paidPct")},
+            {label:"Ordered %", data: series("orderedPct")},
+            {label:"Size-locked %", data: series("lockedPct")},
+          ]
+        },
+        options:{
+          responsive:true,
+          plugins:{
+            legend:{labels:{color:"rgba(248,250,252,.8)", font:{family:"Montserrat", weight:"700"}}},
+            tooltip:{mode:"index", intersect:false}
+          },
+          interaction:{mode:"index", intersect:false},
+          scales:{
+            x:{ticks:{color:"rgba(248,250,252,.65)"}},
+            y:{ticks:{color:"rgba(248,250,252,.65)"}, suggestedMin:0, suggestedMax:100}
+          }
+        }
+      });
+    }
+
+    // =========================
+    // 12) Modals: Create / Edit School
+    // =========================
+    function openCreateSchool(){
+      openModal({
+        title:"Create school",
+        sub:"Creates an isolated workspace with default 4×25% deadlines (you can edit anytime).",
+        bodyHTML: `
+          <div class="formRow">
+            <div>
+              <label class="smallNote">School name</label>
+              <input class="input" id="mSchoolName" placeholder="e.g. Green Hills School"/>
+            </div>
+            <div>
+              <label class="smallNote">School ID</label>
+              <input class="input" id="mSchoolId" placeholder="e.g. green_hills_2026"/>
+              <div class="smallNote" style="margin-top:6px">Stable identifier (no spaces). If empty, we auto-generate.</div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="formRow3">
+            <div>
+              <label class="smallNote">Deadline #1 due</label>
+              <input class="input" id="mD1" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">Deadline #2 due</label>
+              <input class="input" id="mD2" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">Deadline #3 due</label>
+              <input class="input" id="mD3" type="date"/>
+            </div>
+          </div>
+          <div class="formRow3" style="margin-top:10px">
+            <div>
+              <label class="smallNote">Deadline #4 due</label>
+              <input class="input" id="mD4" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">Size edits allowed until</label>
+              <input class="input" id="mSizeUntil" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">Ordering window</label>
+              <select class="input" id="mOrdOpen">
+                <option value="true">Open</option>
+                <option value="false">Closed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="smallNote" style="margin-top:10px">Min payment schedule is locked to: 25% → 50% → 75% → 100% (per blueprint).</div>
+        `,
+        footerHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mCreate">Create</button>
+        `
+      });
+
+      $("#mCancel").onclick = closeModal;
+
+      // defaults: next 4 Fridays
+      const base = new Date();
+      const toDateInput = (d)=> `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      const addDays = (n)=> new Date(base.getTime()+n*24*3600*1000);
+      $("#mD1").value = toDateInput(addDays(7));
+      $("#mD2").value = toDateInput(addDays(14));
+      $("#mD3").value = toDateInput(addDays(21));
+      $("#mD4").value = toDateInput(addDays(28));
+      $("#mSizeUntil").value = toDateInput(addDays(24));
+
+      $("#mCreate").onclick = async ()=>{
+        const name = $("#mSchoolName").value.trim() || "Untitled school";
+        let id = $("#mSchoolId").value.trim();
+        if(!id){
+          id = name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,40) || ("school_"+Math.random().toString(16).slice(2,8));
+        }
+        const d1 = $("#mD1").value, d2=$("#mD2").value, d3=$("#mD3").value, d4=$("#mD4").value;
+        const sizeUntil = $("#mSizeUntil").value;
+        const orderingOpen = $("#mOrdOpen").value==="true";
+        if(!d1||!d2||!d3||!d4) return toast("Missing", "Set all 4 deadlines.");
+
+        const deadlines = [
+          {key:"d1", minPct:25, dueAt: Timestamp.fromDate(new Date(d1+"T23:59:59"))},
+          {key:"d2", minPct:50, dueAt: Timestamp.fromDate(new Date(d2+"T23:59:59"))},
+          {key:"d3", minPct:75, dueAt: Timestamp.fromDate(new Date(d3+"T23:59:59"))},
+          {key:"d4", minPct:100, dueAt: Timestamp.fromDate(new Date(d4+"T23:59:59"))},
+        ];
+
+        const payload = {
+          name,
+          active:true,
+          createdAt: serverTimestamp(),
+          orderingOpen,
+          sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+          sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+          percentSchedule: [25,25,25,25],
+          deadlines,
+          updatedAt: serverTimestamp()
+        };
+
+        try{
+          await setDoc(schoolRef(id), payload, {merge:true});
+          await addAudit("create_school", {schoolId:id, name});
+          toast("Created", `School ${id} created.`);
+          closeModal();
+          await refreshAll();
+        }catch(e){
+          toast("Error", e?.message || "Could not create school.");
+        }
+      };
+    }
+
+    function openEditSchool(schoolId){
+      const s = state.schools.find(x=>x.id===schoolId);
+      if(!s) return;
+      const deadlines = Array.isArray(s.deadlines) ? s.deadlines : defaultDeadlines();
+
+      const toDateInput = (ts)=>{
+        if(!ts) return "";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      };
+
+      openModal({
+        title:`Edit school — ${s.name || s.id}`,
+        sub:"Update deadlines, ordering window, and size-lock rules.",
+        bodyHTML: `
+          <div class="formRow">
+            <div>
+              <label class="smallNote">School name</label>
+              <input class="input" id="mName" value="${esc(s.name||"")}"/>
+            </div>
+            <div>
+              <label class="smallNote">School ID</label>
+              <input class="input" value="${esc(s.id)}" disabled/>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="formRow3">
+            <div>
+              <label class="smallNote">D1 (25%)</label>
+              <input class="input" id="mD1" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">D2 (50%)</label>
+              <input class="input" id="mD2" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">D3 (75%)</label>
+              <input class="input" id="mD3" type="date"/>
+            </div>
+          </div>
+          <div class="formRow3" style="margin-top:10px">
+            <div>
+              <label class="smallNote">D4 (100%)</label>
+              <input class="input" id="mD4" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">Size edits allowed until</label>
+              <input class="input" id="mSizeUntil" type="date"/>
+            </div>
+            <div>
+              <label class="smallNote">Ordering window</label>
+              <select class="input" id="mOrdOpen">
+                <option value="true">Open</option>
+                <option value="false">Closed</option>
+              </select>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="smallNote">Note: Stage enforcement happens inside <b>school-ops.html</b>. This page sets the rules and dates.</div>
+        `,
+        footerHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Save</button>
+        `
+      });
+
+      $("#mD1").value = toDateInput(deadlines.find(d=>d.key==="d1")?.dueAt);
+      $("#mD2").value = toDateInput(deadlines.find(d=>d.key==="d2")?.dueAt);
+      $("#mD3").value = toDateInput(deadlines.find(d=>d.key==="d3")?.dueAt);
+      $("#mD4").value = toDateInput(deadlines.find(d=>d.key==="d4")?.dueAt);
+
+      $("#mSizeUntil").value = toDateInput(s.sizeEditsUntil || s.sizeLockDate);
+      $("#mOrdOpen").value = String(!!s.orderingOpen);
+
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        const name = $("#mName").value.trim() || s.name || "Untitled school";
+        const d1=$("#mD1").value, d2=$("#mD2").value, d3=$("#mD3").value, d4=$("#mD4").value;
+        const sizeUntil=$("#mSizeUntil").value;
+        const orderingOpen = $("#mOrdOpen").value==="true";
+        if(!d1||!d2||!d3||!d4) return toast("Missing", "Set all 4 deadlines.");
+
+        const updatedDeadlines = [
+          {key:"d1", minPct:25, dueAt: Timestamp.fromDate(new Date(d1+"T23:59:59"))},
+          {key:"d2", minPct:50, dueAt: Timestamp.fromDate(new Date(d2+"T23:59:59"))},
+          {key:"d3", minPct:75, dueAt: Timestamp.fromDate(new Date(d3+"T23:59:59"))},
+          {key:"d4", minPct:100, dueAt: Timestamp.fromDate(new Date(d4+"T23:59:59"))},
+        ];
+
+        const patch = {
+          name,
+          orderingOpen,
+          deadlines: updatedDeadlines,
+          sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+          sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+          updatedAt: serverTimestamp()
+        };
+
+        await updateDoc(schoolRef(s.id), patch);
+        await addAudit("edit_school", {schoolId:s.id, patch:{name, orderingOpen, sizeUntil}});
+        toast("Saved", "School updated.");
+        closeModal();
+        await refreshAll();
+      };
+    }
+
+    $("#btnOpenCreateSchool").addEventListener("click", openCreateSchool);
+    $("#btnOpenCreateSchool2").addEventListener("click", openCreateSchool);
+
+    // =========================
+    // 13) Staff modals
+    // =========================
+    function openInviteStaff(){
+      const schools = state.schools.map(s=>({id:s.id, name:s.name||s.id}));
+      openModal({
+        title:"Invite / Add staff",
+        sub:"Create or update a staff profile (Auth user must exist separately).",
+        bodyHTML: `
+          <div class="formRow">
+            <div>
+              <label class="smallNote">User UID (Auth)</label>
+              <input class="input" id="mUid" placeholder="Paste user's Firebase Auth uid"/>
+              <div class="smallNote" style="margin-top:6px">This page does not create Auth users (HTML-only). Create users in Firebase Auth (Email/Password), then paste uid here.</div>
+            </div>
+            <div>
+              <label class="smallNote">Full name</label>
+              <input class="input" id="mFullName" placeholder="e.g. Sara Hassan"/>
+            </div>
+          </div>
+          <div class="formRow" style="margin-top:10px">
+            <div>
+              <label class="smallNote">Email</label>
+              <input class="input" id="mEmail" placeholder="name@agency.com"/>
+            </div>
+            <div>
+              <label class="smallNote">Role</label>
+              <select class="input" id="mRole">
+                ${ROLES.map(r=>`<option value="${esc(r.key)}">${esc(r.name)}</option>`).join("")}
+              </select>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <label class="smallNote">School access</label>
+          <div class="smallNote" style="margin:6px 0 10px">Choose specific schools, or select “All schools”.</div>
+
+          <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label class="tag" style="cursor:pointer">
+                <input type="checkbox" id="mAllSchools"/> <span>All schools</span>
+              </label>
+              ${schools.map(s=>`
+                <label class="tag" style="cursor:pointer">
+                  <input type="checkbox" class="mSchool" value="${esc(s.id)}"/> <span>${esc(s.name)}</span>
+                </label>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="smallNote" style="margin-top:10px">Active staff only. Disable instead of deleting.</div>
+        `,
+        footerHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Save</button>
+        `
+      });
+
+      $("#mCancel").onclick = closeModal;
+      $("#mAllSchools").onchange = ()=>{
+        const all = $("#mAllSchools").checked;
+        $$(".mSchool").forEach(cb=>{ cb.checked = false; cb.disabled = all; });
+      };
+
+      $("#mSave").onclick = async ()=>{
+        const uid = $("#mUid").value.trim();
+        const fullName = $("#mFullName").value.trim();
+        const email = $("#mEmail").value.trim();
+        const role = $("#mRole").value;
+        if(!uid) return toast("Missing", "UID is required.");
+        let schoolsSel = $$(".mSchool").filter(cb=>cb.checked).map(cb=>cb.value);
+        if($("#mAllSchools").checked) schoolsSel = ["*"];
+
+        const payload = {
+          fullName: fullName || email || uid,
+          email: email || "",
+          role,
+          schools: schoolsSel,
+          active: true,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        };
+
+        await setDoc(staffRef(uid), payload, {merge:true});
+        await addAudit("upsert_staff", {uid, role, schools: schoolsSel});
+        toast("Saved", "Staff updated.");
+        closeModal();
+        await refreshAll();
+      };
+    }
+
+    function openEditStaff(uid){
+      const st = state.staff.find(x=>x.id===uid);
+      if(!st) return;
+
+      const schools = state.schools.map(s=>({id:s.id, name:s.name||s.id}));
+      const hasAll = (st.schools||[]).includes("*");
+
+      openModal({
+        title:`Edit staff — ${st.fullName || st.email || uid}`,
+        sub:"Update role, school access, and active status.",
+        bodyHTML: `
+          <div class="formRow">
+            <div>
+              <label class="smallNote">UID</label>
+              <input class="input" value="${esc(uid)}" disabled/>
+            </div>
+            <div>
+              <label class="smallNote">Full name</label>
+              <input class="input" id="mFullName" value="${esc(st.fullName||"")}"/>
+            </div>
+          </div>
+          <div class="formRow" style="margin-top:10px">
+            <div>
+              <label class="smallNote">Email</label>
+              <input class="input" id="mEmail" value="${esc(st.email||"")}"/>
+            </div>
+            <div>
+              <label class="smallNote">Role</label>
+              <select class="input" id="mRole">
+                ${ROLES.map(r=>`<option value="${esc(r.key)}" ${r.key===st.role?"selected":""}>${esc(r.name)}</option>`).join("")}
+              </select>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <label class="smallNote">School access</label>
+          <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03); margin-top:8px">
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label class="tag" style="cursor:pointer">
+                <input type="checkbox" id="mAllSchools" ${hasAll?"checked":""}/> <span>All schools</span>
+              </label>
+              ${schools.map(s=>`
+                <label class="tag" style="cursor:pointer">
+                  <input type="checkbox" class="mSchool" value="${esc(s.id)}"/> <span>${esc(s.name)}</span>
+                </label>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <label class="smallNote">Status</label>
+          <select class="input" id="mActive" style="margin-top:8px">
+            <option value="true" ${st.active!==false?"selected":""}>Active</option>
+            <option value="false" ${st.active===false?"selected":""}>Disabled</option>
+          </select>
+        `,
+        footerHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Save</button>
+        `
+      });
+
+      const allCB = $("#mAllSchools");
+      const schoolCBs = $$(".mSchool");
+      schoolCBs.forEach(cb=>{
+        cb.checked = (st.schools||[]).includes(cb.value);
+        cb.disabled = hasAll;
+      });
+      allCB.onchange = ()=>{
+        const all = allCB.checked;
+        schoolCBs.forEach(cb=>{ cb.checked = false; cb.disabled = all; });
+      };
+
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        const fullName = $("#mFullName").value.trim();
+        const email = $("#mEmail").value.trim();
+        const role = $("#mRole").value;
+        const active = $("#mActive").value==="true";
+        let schoolsSel = schoolCBs.filter(cb=>cb.checked).map(cb=>cb.value);
+        if(allCB.checked) schoolsSel = ["*"];
+
+        await updateDoc(staffRef(uid), {fullName, email, role, schools: schoolsSel, active, updatedAt: serverTimestamp()});
+        await addAudit("edit_staff", {uid, role, schools: schoolsSel, active});
+        toast("Saved", "Staff updated.");
+        closeModal();
+        await refreshAll();
+      };
+    }
+
+    async function toggleStaffActive(uid){
+      const st = state.staff.find(x=>x.id===uid);
+      if(!st) return;
+      const active = !(st.active!==false);
+      await updateDoc(staffRef(uid), {active, updatedAt: serverTimestamp()});
+      await addAudit("toggle_staff_active", {uid, active});
+      toast("Updated", `Staff ${active?"enabled":"disabled"}.`);
+      await refreshAll();
+    }
+
+    $("#btnOpenInviteStaff").addEventListener("click", openInviteStaff);
+
+    // =========================
+    // 14) Settings save
+    // =========================
+    $("#setAgencyId").value = state.agencyId;
+    $("#btnSaveAgencySettings").addEventListener("click", async ()=>{
+      const id = $("#setAgencyId").value.trim() || "senior_agency";
+      const name = $("#setAgencyName").value.trim() || "Senior Uniform Agency";
+      const bootstrapOwner = $("#setBootstrap").value === "on";
+
+      // if changing agencyId, we switch context
+      if(id !== state.agencyId){
+        state.agencyId = id;
+        localStorage.setItem("SUA_AGENCY_ID", id);
+        toast("Switched", `Agency ID set to ${id}. Refreshing...`);
+      }
+
+      await setDoc(agencyRef(), {name, bootstrapOwner, updatedAt: serverTimestamp()}, {merge:true});
+      await addAudit("save_agency_settings", {name, bootstrapOwner});
+      toast("Saved", "Agency settings updated.");
+      await refreshAll();
+    });
+
+    // =========================
+    // 15) Audit log
+    // =========================
+    $("#btnLoadAudit").addEventListener("click", loadAudit);
+    async function loadAudit(){
+      try{
+        const snap = await getDocs(query(auditCol(), orderBy("at","desc"), limit(60)));
+        const rows = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        $("#auditTable").innerHTML = rows.map(r=>`
+          <tr class="row">
+            <td class="mono">${esc(fmtDateTime(r.at))}</td>
+            <td>${esc(r.actorName||"—")}</td>
+            <td><span class="badge"><b>${esc(r.action||"—")}</b></span></td>
+            <td class="mono">${esc(JSON.stringify(r.payload||{}).slice(0,180))}</td>
+          </tr>
+        `).join("");
+        toast("Loaded", "Audit log updated.");
+      }catch(e){
+        toast("Error", e?.message || "Could not load audit log.");
+      }
+    }
+
+    // =========================
+    // 16) Snapshot demo tools
+    // =========================
+    $("#btnSeedSnapshots").addEventListener("click", async ()=>{
+      // Seeds 14 days of random-ish snapshots to make charts look alive for demos.
+      // Safe: only writes to agencies/{agencyId}/snapshots.
+      const now = new Date();
+      let c=40, p=20, o=10, l=5;
+      for(let i=13;i>=0;i--){
+        const d = new Date(now);
+        d.setDate(d.getDate()-i);
+        const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), da=String(d.getDate()).padStart(2,"0");
+        const key = `${y}-${m}-${da}`;
+        c = Math.min(100, c + (Math.random()*6));
+        p = Math.min(100, p + (Math.random()*5));
+        o = Math.min(100, o + (Math.random()*6));
+        l = Math.min(100, l + (Math.random()*5));
+        const ref = doc(db,"agencies",state.agencyId,"snapshots",key);
+        await setDoc(ref, {commitmentPct:c, paidPct:p, orderedPct:o, lockedPct:l, at: Timestamp.fromDate(d)}, {merge:true});
+      }
+      await addAudit("seed_snapshots", {});
+      toast("Seeded", "Demo snapshots created.");
+      await renderTrendsChart();
+    });
+
+    $("#btnClearSnapshots").addEventListener("click", async ()=>{
+      // No delete in this HTML to keep safe; just disable snapshots moving forward.
+      await setDoc(agencyRef(), {snapshotsEnabled:false, updatedAt: serverTimestamp()}, {merge:true});
+      await addAudit("disable_snapshots", {});
+      toast("Disabled", "Snapshot auto-saving disabled (no deletions).");
+      await ensureAgencyDoc();
+    });
+
+    // =========================
+    // 17) Refresh & time
+    // =========================
+    $("#btnRefresh").addEventListener("click", refreshAll);
+    $("#btnRecomputeAlerts").addEventListener("click", async ()=>{
+      await refreshAll();
+      showTab("alerts");
+      $$("#nav button").forEach(b=>b.classList.toggle("active", b.dataset.tab==="alerts"));
+    });
+
+    setInterval(()=>{ $("#pillNow").textContent = new Date().toLocaleString(); }, 900);
+    $("#pillNow").textContent = new Date().toLocaleString();
+
+    // =========================
+    // 18) Auth state bootstrap
+    // =========================
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){
+        state.uid = null;
+        state.me = null;
+        loginView.classList.remove("hide");
+        appView.classList.add("hide");
+        return;
+      }
+
+      state.uid = user.uid;
+
+      // load agency + me
+      try{
+        state.agencyId = localStorage.getItem("SUA_AGENCY_ID") || state.agencyId;
+        $("#setAgencyId").value = state.agencyId;
+        await ensureAgencyDoc();
+
+        const me = await loadMe(user.uid);
+        if(!me){
+          // Not authorized
+          loginView.classList.add("hide");
+          appView.classList.remove("hide");
+          $("#meName").textContent = user.email || "Unknown user";
+          $("#meRole").textContent = "No staff access";
+          showTab("settings");
+          $$("#nav button").forEach(b=>b.classList.toggle("active", b.dataset.tab==="settings"));
+          toast("Access denied", "You don't have a staff record in this agency.");
+          return;
+        }
+
+        state.me = me;
+        $("#meName").textContent = me.fullName || me.email || "—";
+        $("#meRole").textContent = `Role: ${ROLES.find(r=>r.key===me.role)?.name || me.role || "—"}`;
+
+        // Admin-only page (owner + senior managers)
+        if(!["owner"].includes(me.role)){
+          // You can widen this list if you want "Ops Manager" to see admin, but blueprint says owner + senior managers.
+          toast("Limited", "Your role is not Owner. You may have limited visibility here.");
+        }
+
+        loginView.classList.add("hide");
+        appView.classList.remove("hide");
+
+        await refreshAll();
+      }catch(e){
+        console.error(e);
+        toast("Init error", e?.message || "Could not initialize.");
+      }
+    });
+
+  </script>
+</body>
+</html>
+
