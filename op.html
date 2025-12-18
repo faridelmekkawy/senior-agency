@@ -1,0 +1,1903 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Senior Uniform Agency — School Ops</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(255,255,255,.08);
+      --ink:#f8fafc;
+      --muted:rgba(248,250,252,.68);
+      --border:rgba(255,255,255,.10);
+      --accent:#7c3aed;
+      --accent2:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --ok:#22c55e;
+      --radius:18px;
+      --shadow:0 18px 60px rgba(0,0,0,.45);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:
+        radial-gradient(1200px 800px at 20% -10%, rgba(124,58,237,.35), transparent 55%),
+        radial-gradient(900px 700px at 90% 0%, rgba(34,197,94,.22), transparent 52%),
+        radial-gradient(800px 700px at 50% 115%, rgba(245,158,11,.16), transparent 55%),
+        var(--bg);
+      color:var(--ink);
+    }
+    a{color:inherit}
+    .wrap{max-width:1200px;margin:0 auto;padding:18px}
+    .topbar{
+      position:sticky; top:0; z-index:5;
+      backdrop-filter: blur(10px);
+      background:rgba(11,16,32,.72);
+      border-bottom:1px solid var(--border);
+    }
+    .topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .logo{
+      width:38px;height:38px;border-radius:12px;
+      background:linear-gradient(135deg, rgba(124,58,237,.8), rgba(34,197,94,.65));
+      border:1px solid var(--border);
+      flex:0 0 auto;
+    }
+    .brand h1{font-size:14px;margin:0;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .brand .sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pills{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:999px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      font-size:12px;color:var(--muted);
+    }
+    .pill b{color:var(--ink)}
+    .btn{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.05);
+      color:var(--ink);
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:800;
+      font-size:12px;
+      cursor:pointer;
+      transition:.15s transform,.15s background;
+      user-select:none;
+    }
+    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.08)}
+    .btn.primary{background:rgba(124,58,237,.22);border-color:rgba(124,58,237,.45)}
+    .btn.ok{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.40)}
+    .btn.warn{background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.40)}
+    .btn.danger{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.40)}
+    .btn.small{padding:8px 10px;border-radius:10px;font-size:12px}
+    .layout{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-top:14px}
+    @media(max-width:980px){.layout{grid-template-columns:1fr}}
+    .nav{
+      border:1px solid var(--border);
+      background:var(--panel);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:10px;
+    }
+    .nav button{
+      width:100%;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:11px 12px;border-radius:14px;
+      border:1px solid transparent;
+      background:transparent;
+      color:var(--muted);
+      cursor:pointer;
+      font-weight:800;
+    }
+    .nav button:hover{background:rgba(255,255,255,.06);color:var(--ink)}
+    .nav button.active{background:rgba(124,58,237,.22);border-color:rgba(124,58,237,.45);color:var(--ink)}
+    .nav .hint{padding:10px 12px;color:var(--muted);font-size:12px;line-height:1.35}
+    .card{
+      border:1px solid var(--border);
+      background:var(--panel);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .headRow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .pageTitle{font-size:18px;margin:0;letter-spacing:-.3px}
+    .pageSub{color:var(--muted);font-size:12px;margin-top:6px;max-width:70ch;line-height:1.35}
+    .grid{display:grid;gap:12px}
+    .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media(max-width:980px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .kpi{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.05);
+      border-radius:16px;
+      padding:12px;
+    }
+    .kpi .lbl{color:var(--muted);font-size:12px;font-weight:700}
+    .kpi .val{font-size:22px;font-weight:900;margin-top:6px;letter-spacing:-.3px}
+    .kpi .meta{color:var(--muted);font-size:12px;margin-top:6px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .input, select, textarea{
+      width:100%;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      color:var(--ink);
+      border-radius:14px;
+      padding:12px 12px;
+      outline:none;
+      font-family:inherit;
+      font-size:13px;
+    }
+    textarea{min-height:110px;resize:vertical}
+    .label{font-size:12px;color:var(--muted);font-weight:800;margin-bottom:6px}
+    table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    td,th{padding:10px 12px;text-align:left;vertical-align:top}
+    thead th{color:var(--muted);font-size:12px;font-weight:900}
+    tr.item{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      overflow:hidden;
+      border-radius:14px;
+    }
+    tr.item td:first-child{border-top-left-radius:14px;border-bottom-left-radius:14px}
+    tr.item td:last-child{border-top-right-radius:14px;border-bottom-right-radius:14px}
+    .tag{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+      font-size:12px;
+      font-weight:800;
+    }
+    .dot{width:8px;height:8px;border-radius:50%}
+    .dot.ok{background:var(--ok)}
+    .dot.warn{background:var(--warn)}
+    .dot.danger{background:var(--danger)}
+    .dot.info{background:var(--accent)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px}
+    .muted{color:var(--muted)}
+    .strong{font-weight:900}
+    .hr{height:1px;background:var(--border);margin:12px 0}
+    .hide{display:none !important}
+    .footer{
+      margin:18px 0 8px;
+      text-align:center;
+      color:rgba(248,250,252,.55);
+      font-size:12px;
+    }
+    /* modal */
+    #modalBackdrop{
+      position:fixed; inset:0; z-index:20;
+      background:rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center;
+      padding:18px;
+    }
+    .modal{
+      width:min(820px, 100%);
+      border:1px solid var(--border);
+      background:rgba(11,16,32,.94);
+      border-radius:22px;
+      box-shadow:0 30px 90px rgba(0,0,0,.6);
+      overflow:hidden;
+    }
+    .modalHead{padding:14px 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .modalHead h3{margin:0;font-size:16px;letter-spacing:-.2px}
+    .modalHead .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.35}
+    .modalBody{padding:14px;max-height:70vh;overflow:auto}
+    .modalFoot{padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+    #toasts{position:fixed; right:14px; bottom:14px; display:flex; flex-direction:column; gap:10px; z-index:50}
+    .toast{
+      min-width:260px; max-width:360px;
+      border:1px solid var(--border);
+      background:rgba(15,23,42,.90);
+      border-radius:16px;
+      padding:10px 12px;
+      box-shadow:0 16px 50px rgba(0,0,0,.5);
+    }
+    .toast b{display:block;font-size:12px}
+    .toast span{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.35}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <div class="brand">
+        <div class="logo"></div>
+        <div style="min-width:0">
+          <h1 id="agencyName">Senior Uniform Agency</h1>
+          <div class="sub" id="schoolNameLine">School Ops</div>
+        </div>
+      </div>
+      <div class="pills">
+        <span class="pill"><b id="meName">—</b><span id="meRole">—</span></span>
+        <span class="pill mono" id="pillAgency">agency: —</span>
+        <span class="pill mono" id="pillSchool">school: —</span>
+        <span class="pill mono" id="pillNow">—</span>
+        <button class="btn small" id="btnRefresh">Refresh</button>
+        <button class="btn small danger" id="btnLogout">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- Login -->
+    <section id="loginView" class="card">
+      <div class="headRow">
+        <div>
+          <h2 class="pageTitle" style="margin:0">School Ops Login</h2>
+          <div class="pageSub">Log in with your staff email. Owner must grant you access to this school.</div>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div class="row">
+        <div style="flex:1;min-width:220px">
+          <div class="label">Email</div>
+          <input class="input" id="loginEmail" placeholder="you@agency.com" autocomplete="username"/>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div class="label">Password</div>
+          <input class="input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <button class="btn primary" id="btnLogin">Login</button>
+          <button class="btn" id="btnForgot">Forgot password</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- App -->
+    <section id="appView" class="hide">
+      <div class="layout">
+        <aside class="nav">
+          <div class="hint">
+            <div class="strong" style="color:var(--ink)">School context</div>
+            <div style="margin-top:8px">Select the active school (no URL params; saved locally).</div>
+            <div style="margin-top:10px">
+              <div class="label">Agency ID</div>
+              <input class="input mono" id="setAgencyId" placeholder="senior_agency"/>
+            </div>
+            <div style="margin-top:10px">
+              <div class="label">School</div>
+              <select class="input" id="schoolSelect"></select>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <button class="btn small" id="btnSaveCtx">Save</button>
+              <button class="btn small warn" id="btnReloadCtx">Reload</button>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <button class="active" data-tab="dash"><span>Dashboard</span><span class="mono">1</span></button>
+          <button data-tab="students"><span>Students & Gating</span><span class="mono">2</span></button>
+          <button data-tab="payments"><span>Payment Approvals</span><span class="mono" id="navPending">—</span></button>
+          <button data-tab="products"><span>Products</span><span class="mono">4</span></button>
+          <button data-tab="warehouse"><span>Warehouse</span><span class="mono">5</span></button>
+          <button data-tab="audit"><span>Audit</span><span class="mono">6</span></button>
+
+          <div class="hr"></div>
+          <div class="hint">
+            <div class="strong" style="color:var(--ink)">Roles</div>
+            <div style="margin-top:8px" id="roleHint">—</div>
+          </div>
+        </aside>
+
+        <main class="grid">
+          <!-- DASH -->
+          <section id="tab-dash" class="card">
+            <div class="headRow">
+              <div>
+                <h2 class="pageTitle" id="pageTitle">Dashboard</h2>
+                <div class="pageSub" id="pageSub">Live compliance, timeline, and operational status for the selected school.</div>
+              </div>
+              <div class="row">
+                <button class="btn small" id="btnOpenSchoolSettings">School settings</button>
+                <button class="btn small ok" id="btnExportCSV">Export CSV</button>
+              </div>
+            </div>
+            <div class="hr"></div>
+
+            <div class="grid kpis">
+              <div class="kpi">
+                <div class="lbl">Committed</div>
+                <div class="val" id="kpiCommit">—</div>
+                <div class="meta" id="kpiCommitMeta">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Avg paid %</div>
+                <div class="val" id="kpiPaid">—</div>
+                <div class="meta" id="kpiPaidMeta">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Ordered</div>
+                <div class="val" id="kpiOrdered">—</div>
+                <div class="meta" id="kpiOrderedMeta">—</div>
+              </div>
+              <div class="kpi">
+                <div class="lbl">Sizes locked</div>
+                <div class="val" id="kpiLocked">—</div>
+                <div class="meta" id="kpiLockedMeta">—</div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="grid" style="grid-template-columns:1.25fr .75fr;gap:12px">
+              <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03)">
+                <div class="strong">Compliance boxes (R / A / G)</div>
+                <div class="muted" style="margin-top:6px">Manual status + notes for your ops timeline (works per school).</div>
+                <div class="hr"></div>
+                <div id="ragGrid" class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"></div>
+                <div class="row" style="margin-top:10px">
+                  <button class="btn small primary" id="btnSaveRAG">Save RAG</button>
+                </div>
+              </div>
+
+              <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03)">
+                <div class="strong">Timeline & enforcement</div>
+                <div class="muted" style="margin-top:6px">Deadlines drive blocking + progress.</div>
+                <div class="hr"></div>
+                <div id="timelineWrap"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- STUDENTS -->
+          <section id="tab-students" class="card hide">
+            <div class="headRow">
+              <div>
+                <h2 class="pageTitle">Students & Gating</h2>
+                <div class="pageSub">Search, inspect, override blocks, lock sizes, and track each student’s journey.</div>
+              </div>
+              <div class="row">
+                <input class="input" id="studentSearch" placeholder="Search by name / phone / code…" style="max-width:340px">
+                <button class="btn small" id="btnAddStudent">Add student</button>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Payments</th>
+                    <th>Order</th>
+                    <th>Sizes</th>
+                    <th>Status</th>
+                    <th class="right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTable"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- PAYMENTS -->
+          <section id="tab-payments" class="card hide">
+            <div class="headRow">
+              <div>
+                <h2 class="pageTitle">Payment Approvals</h2>
+                <div class="pageSub">Approve/reject uploaded payment screenshots. Approval updates paid % and unlocks next steps.</div>
+              </div>
+              <div class="row">
+                <select class="input" id="payFilter" style="max-width:240px">
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="all">All</option>
+                </select>
+                <button class="btn small" id="btnLoadPayments">Load</button>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div id="paymentsWrap"></div>
+          </section>
+
+          <!-- PRODUCTS -->
+          <section id="tab-products" class="card hide">
+            <div class="headRow">
+              <div>
+                <h2 class="pageTitle">Products</h2>
+                <div class="pageSub">Per-school products: bilingual names, optional printed-name placeholders, size chart references.</div>
+              </div>
+              <div class="row">
+                <button class="btn small" id="btnAddProduct">Add product</button>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Names</th>
+                    <th>Options</th>
+                    <th class="right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="productsTable"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- WAREHOUSE -->
+          <section id="tab-warehouse" class="card hide">
+            <div class="headRow">
+              <div>
+                <h2 class="pageTitle">Warehouse</h2>
+                <div class="pageSub">Packing & delivery workflow per student (manual, no barcode required).</div>
+              </div>
+              <div class="row">
+                <select class="input" id="whFilter" style="max-width:220px">
+                  <option value="to_pack">To pack</option>
+                  <option value="packed">Packed</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="all">All</option>
+                </select>
+                <button class="btn small" id="btnLoadWarehouse">Load</button>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div id="warehouseWrap"></div>
+          </section>
+
+          <!-- AUDIT -->
+          <section id="tab-audit" class="card hide">
+            <div class="headRow">
+              <div>
+                <h2 class="pageTitle">Audit</h2>
+                <div class="pageSub">Recent actions in this school workspace.</div>
+              </div>
+              <div class="row">
+                <button class="btn small" id="btnLoadAudit">Load</button>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div style="overflow:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Payload</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTable"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="footer">Powered by Luma</div>
+        </main>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBackdrop">
+    <div class="modal">
+      <div class="modalHead">
+        <div>
+          <h3 id="modalTitle">—</h3>
+          <div class="sub" id="modalSub"></div>
+        </div>
+        <button class="btn small" id="modalClose">Close</button>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+      <div class="modalFoot" id="modalFoot"></div>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <script type="module">
+    // =========================
+    // 1) Firebase config (same project)
+    // =========================
+    const firebaseConfig =  {
+      apiKey:"AIzaSyA80bAAGPuyscnTVS-zwrxE9Jp3tPiS1gM",
+      authDomain:"events-339ce.firebaseapp.com",
+      databaseURL:"https://events-339ce-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId:"events-339ce",
+      storageBucket:"events-339ce.firebasestorage.app",
+      messagingSenderId:"175601544315",
+      appId:"1:175601544315:web:00c94b4affa972b3a286de"
+    };
+
+    // =========================
+    // 2) Imports
+    // =========================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged,
+      signInWithEmailAndPassword, sendPasswordResetEmail, signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc, addDoc,
+      collection, query, where, getDocs, orderBy, limit,
+      serverTimestamp, Timestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    // =========================
+    // 3) App init
+    // =========================
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // =========================
+    // 4) Helpers
+    // =========================
+    const $ = (s)=>document.querySelector(s);
+    const $$ = (s)=>Array.from(document.querySelectorAll(s));
+    const esc = (s)=> String(s ?? "").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    const fmtPct = (n)=> (isFinite(n) ? `${Math.round(n)}%` : "—");
+    const fmtDate = (ts)=>{
+      if(!ts) return "—";
+      const d = ts instanceof Timestamp ? ts.toDate() : (ts.toDate ? ts.toDate() : new Date(ts));
+      return d.toLocaleDateString(undefined, {year:"numeric", month:"short", day:"2-digit"});
+    };
+    const fmtDateTime = (ts)=>{
+      if(!ts) return "—";
+      const d = ts instanceof Timestamp ? ts.toDate() : (ts.toDate ? ts.toDate() : new Date(ts));
+      return d.toLocaleString(undefined, {year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit"});
+    };
+    function toast(title, msg){
+      const wrap = $("#toasts");
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.innerHTML = `<b>${esc(title)}</b><span>${esc(msg||"")}</span>`;
+      wrap.appendChild(el);
+      setTimeout(()=>{ el.style.opacity="0"; el.style.transform="translateY(-4px)"; el.style.transition=".25s"; }, 3300);
+      setTimeout(()=>{ el.remove(); }, 3800);
+    }
+    function openModal({title, sub, bodyHTML, footHTML}){
+      $("#modalTitle").textContent = title || "—";
+      $("#modalSub").textContent = sub || "";
+      $("#modalBody").innerHTML = bodyHTML || "";
+      $("#modalFoot").innerHTML = footHTML || "";
+      $("#modalBackdrop").style.display = "flex";
+    }
+    function closeModal(){ $("#modalBackdrop").style.display="none"; }
+    $("#modalClose").addEventListener("click", closeModal);
+    $("#modalBackdrop").addEventListener("click", (e)=>{ if(e.target.id==="modalBackdrop") closeModal(); });
+
+    function applyLogo(url){
+      const logos = $$(".logo");
+      logos.forEach(el=>{
+        if(url){
+          el.style.backgroundImage = `url(${url})`;
+          el.style.backgroundSize = "cover";
+          el.style.backgroundPosition = "center";
+          el.style.backgroundRepeat = "no-repeat";
+        }else{
+          el.style.backgroundImage = "";
+        }
+      });
+    }
+
+    // =========================
+    // 5) State + refs
+    // =========================
+    const ROLES = [
+      {key:"owner", name:"Owner"},
+      {key:"finance", name:"Finance Approver"},
+      {key:"ops", name:"Ops Manager"},
+      {key:"product", name:"Product Manager"},
+      {key:"warehouse", name:"Warehouse"},
+      {key:"viewer", name:"Viewer"},
+    ];
+
+    const state = {
+      uid:null,
+      me:null,
+      agencyId: localStorage.getItem("SUA_AGENCY_ID") || "senior_agency",
+      schoolId: localStorage.getItem("SUA_SCHOOL_ID") || "",
+      agency:null,
+      school:null,
+      students:[],
+      products:[],
+      pendingPayments:0
+    };
+
+    const agencyRef = ()=> doc(db, "agencies", state.agencyId);
+    const staffRef = (uid)=> doc(db, "agencies", state.agencyId, "staff", uid);
+    const schoolsCol = ()=> collection(db, "agencies", state.agencyId, "schools");
+    const schoolRef = (sid)=> doc(db, "agencies", state.agencyId, "schools", sid);
+    const studentsCol = (sid)=> collection(db, "agencies", state.agencyId, "schools", sid, "students");
+    const paymentsCol = (sid)=> collection(db, "agencies", state.agencyId, "schools", sid, "payments");
+    const productsCol = (sid)=> collection(db, "agencies", state.agencyId, "schools", sid, "products");
+    const auditCol = (sid)=> collection(db, "agencies", state.agencyId, "schools", sid, "audit");
+
+    function hasSchoolAccess(sid){
+      if(!state.me) return false;
+      if(state.me.role==="owner") return true;
+      const schools = state.me.schools || [];
+      return schools.includes("*") || schools.includes(sid);
+    }
+
+    async function addAudit(action, payload={}){
+      try{
+        if(!state.schoolId) return;
+        await addDoc(auditCol(state.schoolId), {
+          at: serverTimestamp(),
+          actorUid: state.uid || null,
+          actorName: state.me?.fullName || state.me?.email || "—",
+          action,
+          payload
+        });
+      }catch(e){}
+    }
+
+    async function ensureAgencyDoc(){
+      const ref = agencyRef();
+      const snap = await getDoc(ref);
+      if(!snap.exists()){
+        await setDoc(ref, {
+          name: "Senior Uniform Agency",
+          logoUrl: "",
+          createdAt: serverTimestamp(),
+          bootstrapOwner: false
+        }, {merge:true});
+      }
+      state.agency = (await getDoc(ref)).data();
+      $("#agencyName").textContent = state.agency?.name || "Senior Uniform Agency";
+      applyLogo(state.agency?.logoUrl || "");
+      $("#pillAgency").textContent = `agency: ${state.agencyId}`;
+      $("#setAgencyId").value = state.agencyId;
+    }
+
+    async function loadMe(uid){
+      const snap = await getDoc(staffRef(uid));
+      if(!snap.exists()) return null;
+      return { uid, ...snap.data() };
+    }
+
+    async function loadSchoolsForSelector(){
+      const snap = await getDocs(schoolsCol());
+      const all = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      const allowed = all.filter(s=>hasSchoolAccess(s.id));
+      const sel = $("#schoolSelect");
+      sel.innerHTML = allowed.map(s=>`<option value="${esc(s.id)}">${esc(s.name || s.id)}</option>`).join("");
+      if(state.schoolId && allowed.some(x=>x.id===state.schoolId)) sel.value = state.schoolId;
+      else if(allowed.length){ state.schoolId = allowed[0].id; sel.value = state.schoolId; localStorage.setItem("SUA_SCHOOL_ID", state.schoolId); }
+      $("#pillSchool").textContent = `school: ${state.schoolId || "—"}`;
+      await loadSchool();
+    }
+
+    async function loadSchool(){
+      if(!state.schoolId) return;
+      const snap = await getDoc(schoolRef(state.schoolId));
+      if(!snap.exists()){
+        toast("Missing school", "This school doc doesn't exist yet. Create it in agency-admin.");
+        state.school = null;
+        $("#schoolNameLine").textContent = "School Ops";
+        return;
+      }
+      state.school = {id: state.schoolId, ...snap.data()};
+      $("#schoolNameLine").textContent = `School Ops — ${state.school.name || state.schoolId}`;
+    }
+
+    function defaultDeadlines(n=4){
+      const base = new Date();
+      const addDays = (d)=> new Date(base.getTime()+d*24*3600*1000);
+      const step = 100/n;
+      return Array.from({length:n}, (_,i)=>({
+        key:`d${i+1}`,
+        minPct: Math.round(step*(i+1)),
+        dueAt: Timestamp.fromDate(addDays(7*(i+1)))
+      }));
+    }
+
+    // =========================
+    // 6) Auth handlers
+    // =========================
+    $("#btnLogin").addEventListener("click", async ()=>{
+      const email = $("#loginEmail").value.trim();
+      const pass = $("#loginPass").value;
+      if(!email || !pass) return toast("Missing", "Enter email + password.");
+      try{ await signInWithEmailAndPassword(auth, email, pass); }
+      catch(e){ toast("Login failed", e?.message || "Try again."); }
+    });
+    $("#btnForgot").addEventListener("click", async ()=>{
+      const email = $("#loginEmail").value.trim();
+      if(!email) return toast("Missing", "Enter your email first.");
+      try{ await sendPasswordResetEmail(auth, email); toast("Email sent", "Check inbox for reset link."); }
+      catch(e){ toast("Error", e?.message || "Could not send reset email."); }
+    });
+    $("#btnLogout").addEventListener("click", async ()=>{ await signOut(auth); });
+
+    // =========================
+    // 7) Navigation
+    // =========================
+    $$(".nav button[data-tab]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        $$(".nav button[data-tab]").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        showTab(btn.dataset.tab);
+      });
+    });
+    function showTab(tab){
+      ["dash","students","payments","products","warehouse","audit"].forEach(k=>{
+        $("#tab-"+k).classList.toggle("hide", k!==tab);
+      });
+    }
+
+    // =========================
+    // 8) Core loads
+    // =========================
+    async function loadStudents(){
+      if(!state.schoolId) return;
+      const snap = await getDocs(query(studentsCol(state.schoolId), limit(1200)));
+      state.students = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    }
+
+    async function loadProducts(){
+      if(!state.schoolId) return;
+      const snap = await getDocs(query(productsCol(state.schoolId), orderBy("createdAt","desc"), limit(300)));
+      state.products = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    }
+
+    async function countPendingPayments(){
+      if(!state.schoolId) return 0;
+      const snap = await getDocs(query(paymentsCol(state.schoolId), where("status","==","pending"), limit(2000)));
+      state.pendingPayments = snap.size;
+      $("#navPending").textContent = state.pendingPayments ? String(state.pendingPayments) : "0";
+      return state.pendingPayments;
+    }
+
+    // =========================
+    // 9) Dashboard compute + render
+    // =========================
+    function computeKPIs(){
+      const st = state.students || [];
+      const total = st.length;
+      const committed = st.filter(x=>!!x.committedAt).length;
+      const ordered = st.filter(x=>!!x.orderedAt).length;
+      const locked = st.filter(x=>!!x.sizesLocked).length;
+      const avgPaid = total ? (st.reduce((a,x)=>a+Number(x.paidPct||0),0)/total) : 0;
+      return {total, committed, ordered, locked, avgPaid};
+    }
+
+    function computeDeadlineStatus(){
+      const s = state.school || {};
+      const instCount = Number(s.installmentsCount || 4);
+      const deadlines = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(instCount);
+      const now = new Date();
+      const st = state.students || [];
+      const rows = deadlines.map(d=>{
+        const due = d?.dueAt?.toDate ? d.dueAt.toDate() : (d?.dueAt ? new Date(d.dueAt) : null);
+        const isPast = due ? now > due : false;
+        const missed = isPast ? st.filter(x=>Number(x.paidPct||0) < Number(d.minPct||0)).length : 0;
+        return {key:d.key, minPct:d.minPct, dueAt:d.dueAt, due, isPast, missed, total: st.length};
+      });
+      return rows;
+    }
+
+    function renderTimeline(){
+      const rows = computeDeadlineStatus();
+      const wrap = $("#timelineWrap");
+      if(!rows.length){
+        wrap.innerHTML = `<div class="muted">No deadlines configured.</div>`;
+        return;
+      }
+      wrap.innerHTML = rows.map(r=>{
+        const sev = (r.isPast && r.missed>0) ? "danger" : (r.isPast ? "warn" : "info");
+        const dot = sev==="danger"?"danger":(sev==="warn"?"warn":"info");
+        const note = r.isPast
+          ? (r.missed>0 ? `${r.missed}/${r.total} below ${r.minPct}%` : "Met")
+          : "Upcoming";
+        return `
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
+            <div>
+              <div class="tag"><span class="dot ${dot}"></span><span>${esc(String(r.key||"").toUpperCase())}</span></div>
+              <div style="margin-top:8px" class="strong">Min ${esc(r.minPct)}% — due ${esc(fmtDate(r.dueAt))}</div>
+              <div class="muted" style="margin-top:6px">${esc(note)}</div>
+            </div>
+            <div>
+              <button class="btn small warn" data-extend="${esc(r.key)}">Extend</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+      wrap.querySelectorAll("button[data-extend]").forEach(b=>{
+        b.addEventListener("click", ()=> openExtendDeadline(b.dataset.extend));
+      });
+    }
+
+    function ragTemplate(){
+      return [
+        {key:"designs", title:"Designs & approvals"},
+        {key:"payments", title:"Payments & approvals"},
+        {key:"ordering", title:"Ordering window"},
+        {key:"sizes", title:"Sizes lock"},
+        {key:"production", title:"Production readiness"},
+        {key:"delivery", title:"Packing & delivery"},
+      ];
+    }
+
+    function renderRAG(){
+      const s = state.school || {};
+      const rag = s.rag || {};
+      const notes = s.ragNotes || {};
+      const grid = $("#ragGrid");
+      grid.innerHTML = ragTemplate().map(x=>{
+        const val = rag[x.key] || "amber";
+        const dot = val==="green"?"ok":(val==="red"?"danger":"warn");
+        return `
+          <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03);padding:12px">
+            <div class="strong">${esc(x.title)}</div>
+            <div class="row" style="margin-top:10px">
+              <label class="tag"><input type="radio" name="rag_${esc(x.key)}" value="green" ${val==="green"?"checked":""} style="transform:scale(1.05)"> <span class="dot ok"></span> Green</label>
+              <label class="tag"><input type="radio" name="rag_${esc(x.key)}" value="amber" ${val==="amber"?"checked":""} style="transform:scale(1.05)"> <span class="dot warn"></span> Amber</label>
+              <label class="tag"><input type="radio" name="rag_${esc(x.key)}" value="red" ${val==="red"?"checked":""} style="transform:scale(1.05)"> <span class="dot danger"></span> Red</label>
+            </div>
+            <div class="label" style="margin-top:10px">Note</div>
+            <input class="input" data-note="${esc(x.key)}" value="${esc(notes[x.key]||"")}" placeholder="Optional note…"/>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function saveRAG(){
+      if(!state.schoolId) return;
+      if(!(state.me.role==="owner" || state.me.role==="ops")) return toast("Blocked", "Only Owner/Ops can edit RAG.");
+      const rag = {};
+      ragTemplate().forEach(x=>{
+        const checked = document.querySelector(`input[name="rag_${x.key}"]:checked`);
+        rag[x.key] = checked ? checked.value : "amber";
+      });
+      const ragNotes = {};
+      document.querySelectorAll("input[data-note]").forEach(inp=>{
+        ragNotes[inp.dataset.note] = inp.value.trim();
+      });
+      await setDoc(schoolRef(state.schoolId), { rag, ragNotes, updatedAt: serverTimestamp() }, {merge:true});
+      await addAudit("save_rag", {rag});
+      toast("Saved", "RAG updated.");
+      await refreshAll();
+    }
+
+    function renderDashKPIs(){
+      const k = computeKPIs();
+      $("#kpiCommit").textContent = fmtPct(k.total ? k.committed/k.total*100 : 0);
+      $("#kpiCommitMeta").textContent = `${k.committed}/${k.total} committed`;
+      $("#kpiPaid").textContent = fmtPct(k.avgPaid);
+      $("#kpiPaidMeta").textContent = `Average across students`;
+      $("#kpiOrdered").textContent = fmtPct(k.total ? k.ordered/k.total*100 : 0);
+      $("#kpiOrderedMeta").textContent = `${k.ordered}/${k.total} ordered`;
+      $("#kpiLocked").textContent = fmtPct(k.total ? k.locked/k.total*100 : 0);
+      $("#kpiLockedMeta").textContent = `${k.locked}/${k.total} locked`;
+    }
+
+    // =========================
+    // 10) Students table + actions
+    // =========================
+    function studentGateStatus(stu){
+      // Purely computed status for UI. Enforcement lives in student portal + ops policies.
+      const s = state.school || {};
+      const instCount = Number(s.installmentsCount || 4);
+      const deadlines = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(instCount);
+      const now = new Date();
+      let required = 0;
+      deadlines.forEach(d=>{
+        const due = d?.dueAt?.toDate ? d.dueAt.toDate() : (d?.dueAt ? new Date(d.dueAt) : null);
+        if(due && now > due) required = Math.max(required, Number(d.minPct||0));
+      });
+      const paid = Number(stu.paidPct||0);
+      const blocked = !!stu.blocked || (paid < required);
+      const reason = blocked
+        ? (stu.blockReason || (paid < required ? `Below required ${required}%` : "Blocked"))
+        : "OK";
+      return {blocked, required, paid, reason};
+    }
+
+    function renderStudents(){
+      const q = ($("#studentSearch").value||"").trim().toLowerCase();
+      const rows = (state.students||[]).filter(s=>{
+        if(!q) return true;
+        const hay = `${s.fullName||""} ${s.phone||""} ${s.studentCode||""} ${s.id||""}`.toLowerCase();
+        return hay.includes(q);
+      }).sort((a,b)=>{
+        const aa = (a.fullName||"").toLowerCase();
+        const bb = (b.fullName||"").toLowerCase();
+        return aa.localeCompare(bb);
+      });
+
+      const tbody = $("#studentsTable");
+      tbody.innerHTML = rows.map(stu=>{
+        const gate = studentGateStatus(stu);
+        const statusTag = gate.blocked
+          ? `<span class="tag"><span class="dot danger"></span><span>Blocked</span></span>`
+          : `<span class="tag"><span class="dot ok"></span><span>OK</span></span>`;
+
+        const orderTag = stu.orderedAt
+          ? `<span class="tag"><span class="dot ok"></span><span>Ordered</span></span>`
+          : `<span class="tag"><span class="dot warn"></span><span>Not ordered</span></span>`;
+
+        const sizeTag = stu.sizesLocked
+          ? `<span class="tag"><span class="dot ok"></span><span>Locked</span></span>`
+          : `<span class="tag"><span class="dot warn"></span><span>Editable</span></span>`;
+
+        const payLine = `<div class="strong">${esc(fmtPct(gate.paid))}</div><div class="muted">Required now: ${esc(fmtPct(gate.required))}</div>`;
+        const orderLine = `<div class="muted">${stu.orderedAt ? "Placed: "+esc(fmtDate(stu.orderedAt)) : "—"}</div>`;
+        const sizeLine = `<div class="muted">${stu.sizesLocked ? "Locked" : "Can edit (until lock date)"}</div>`;
+
+        return `
+          <tr class="item">
+            <td>
+              <div class="strong">${esc(stu.fullName || "Student")}</div>
+              <div class="muted">${esc(stu.phone || "—")} ${stu.studentCode ? " • "+esc(stu.studentCode):""}</div>
+              <div class="mono">${esc(stu.id)}</div>
+            </td>
+            <td>${payLine}</td>
+            <td>${orderTag}${orderLine}</td>
+            <td>${sizeTag}${sizeLine}</td>
+            <td>
+              ${statusTag}
+              <div class="muted" style="margin-top:6px">${esc(gate.reason)}</div>
+            </td>
+            <td class="right">
+              <div class="row" style="justify-content:flex-end">
+                <button class="btn small" data-open="${esc(stu.id)}">Open</button>
+                <button class="btn small ${gate.blocked?'ok':'danger'}" data-toggle-block="${esc(stu.id)}">${gate.blocked?"Unblock":"Block"}</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("") || `<tr><td class="muted" colspan="6">No students found.</td></tr>`;
+
+      tbody.querySelectorAll("button[data-open]").forEach(b=>{
+        b.addEventListener("click", ()=> openStudentDrawer(b.dataset.open));
+      });
+      tbody.querySelectorAll("button[data-toggle-block]").forEach(b=>{
+        b.addEventListener("click", ()=> toggleStudentBlock(b.dataset.toggleBlock));
+      });
+    }
+
+    async function toggleStudentBlock(studentId){
+      if(!(state.me.role==="owner" || state.me.role==="ops")) return toast("Blocked", "Only Owner/Ops can block/unblock.");
+      const stu = state.students.find(x=>x.id===studentId);
+      if(!stu) return;
+      const newVal = !stu.blocked;
+      openModal({
+        title: `${newVal ? "Block" : "Unblock"} student`,
+        sub: `${stu.fullName || studentId}`,
+        bodyHTML: `
+          <div class="label">Reason (optional)</div>
+          <input class="input" id="mReason" placeholder="e.g. Pending payment approval / missing data…" value="${esc(stu.blockReason||"")}"/>
+          <div class="muted" style="margin-top:10px">Blocking immediately prevents next steps in student portal. Unblocking re-allows flow.</div>
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn ${newVal?'danger':'ok'}" id="mSave">${newVal?'Block':'Unblock'}</button>
+        `
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        const reason = ($("#mReason").value||"").trim();
+        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",studentId),
+          {blocked:newVal, blockReason: reason || "", updatedAt: serverTimestamp()}, {merge:true});
+        await addAudit("toggle_student_block", {studentId, blocked:newVal, reason});
+        closeModal();
+        toast("Updated", `Student ${newVal?"blocked":"unblocked"}.`);
+        await refreshAll();
+        showTab("students");
+      };
+    }
+
+    function openStudentDrawer(studentId){
+      const stu = state.students.find(x=>x.id===studentId);
+      if(!stu) return;
+      const gate = studentGateStatus(stu);
+      const items = Array.isArray(stu.items) ? stu.items : [];
+      openModal({
+        title: `Student — ${stu.fullName || studentId}`,
+        sub: `Paid: ${Math.round(Number(stu.paidPct||0))}% • Required: ${Math.round(gate.required)}% • ${gate.blocked?"Blocked":"OK"}`,
+        bodyHTML: `
+          <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+            <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03)">
+              <div class="strong">Profile</div>
+              <div class="hr"></div>
+              <div class="muted">Phone</div><div class="strong">${esc(stu.phone||"—")}</div>
+              <div class="hr"></div>
+              <div class="muted">Student code</div><div class="strong">${esc(stu.studentCode||"—")}</div>
+              <div class="hr"></div>
+              <div class="muted">Committed</div><div class="strong">${esc(stu.committedAt ? fmtDate(stu.committedAt) : "—")}</div>
+              <div class="hr"></div>
+              <div class="muted">Notes</div>
+              <textarea class="input" id="mStuNotes" placeholder="Internal notes…">${esc(stu.opsNote||"")}</textarea>
+              <div class="row" style="margin-top:10px">
+                <button class="btn small primary" id="mSaveNotes">Save notes</button>
+              </div>
+            </div>
+            <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03)">
+              <div class="strong">Order / Sizes</div>
+              <div class="hr"></div>
+              <div class="muted">Order status</div>
+              <div style="margin-top:6px">${stu.orderedAt ? `<span class="tag"><span class="dot ok"></span><span>Ordered</span></span>` : `<span class="tag"><span class="dot warn"></span><span>Not ordered</span></span>`}</div>
+              <div class="hr"></div>
+              <div class="muted">Sizes</div>
+              <pre class="mono" style="white-space:pre-wrap;margin:8px 0 0">${esc(JSON.stringify(stu.sizes || {}, null, 2))}</pre>
+              <div class="row" style="margin-top:10px;flex-wrap:wrap">
+                <button class="btn small ${stu.sizesLocked?'warn':'ok'}" id="mToggleLock">${stu.sizesLocked ? "Unlock sizes" : "Lock sizes"}</button>
+                <button class="btn small" id="mEditSizes">Edit sizes</button>
+              </div>
+              <div class="hr"></div>
+              <div class="muted">Items</div>
+              <div class="muted" style="margin-top:6px">${items.length ? esc(items.map(x=>`${x.name||x.productName||"Item"} x${x.qty||1}`).join(" • ")) : "—"}</div>
+            </div>
+          </div>
+        `,
+        footHTML: `
+          <button class="btn" id="mClose">Close</button>
+        `
+      });
+      $("#mClose").onclick = closeModal;
+
+      $("#mSaveNotes").onclick = async ()=>{
+        if(!(state.me.role==="owner" || state.me.role==="ops")) return toast("Blocked", "Only Owner/Ops can edit notes.");
+        const opsNote = ($("#mStuNotes").value||"").trim();
+        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",studentId),
+          {opsNote, updatedAt: serverTimestamp()}, {merge:true});
+        await addAudit("save_student_note", {studentId});
+        toast("Saved","Notes updated.");
+        await refreshAll();
+      };
+
+      $("#mToggleLock").onclick = async ()=>{
+        if(!(state.me.role==="owner" || state.me.role==="ops")) return toast("Blocked", "Only Owner/Ops can lock/unlock.");
+        const newVal = !stu.sizesLocked;
+        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",studentId),
+          {sizesLocked:newVal, updatedAt: serverTimestamp()}, {merge:true});
+        await addAudit("toggle_sizes_lock", {studentId, sizesLocked:newVal});
+        toast("Updated", `Sizes ${newVal?"locked":"unlocked"}.`);
+        closeModal();
+        await refreshAll();
+        showTab("students");
+      };
+
+      $("#mEditSizes").onclick = ()=> openEditSizes(studentId);
+    }
+
+    function openEditSizes(studentId){
+      const stu = state.students.find(x=>x.id===studentId);
+      if(!stu) return;
+      if(!(state.me.role==="owner" || state.me.role==="ops")) return toast("Blocked", "Only Owner/Ops can edit sizes.");
+      openModal({
+        title:`Edit sizes — ${stu.fullName || studentId}`,
+        sub:"Edit JSON sizes map (advanced). Use carefully.",
+        bodyHTML: `
+          <div class="label">Sizes JSON</div>
+          <textarea class="input" id="mSizesJson">${esc(JSON.stringify(stu.sizes||{}, null, 2))}</textarea>
+          <div class="muted" style="margin-top:8px">Example: {"shirt":"M","pants":"32","jacket":"L"}</div>
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Save</button>
+        `
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        try{
+          const obj = JSON.parse($("#mSizesJson").value||"{}");
+          await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",studentId),
+            {sizes: obj, updatedAt: serverTimestamp()}, {merge:true});
+          await addAudit("edit_sizes", {studentId});
+          toast("Saved","Sizes updated.");
+          closeModal();
+          await refreshAll();
+          showTab("students");
+        }catch(e){
+          toast("Invalid JSON", "Fix the JSON formatting and try again.");
+        }
+      };
+    }
+
+    async function addStudent(){
+      if(!(state.me.role==="owner" || state.me.role==="ops")) return toast("Blocked", "Only Owner/Ops can add students.");
+      openModal({
+        title:"Add student",
+        sub:"Creates a student record. They will use student-portal.html to complete payments and orders.",
+        bodyHTML: `
+          <div class="row">
+            <div style="flex:1;min-width:220px">
+              <div class="label">Full name</div>
+              <input class="input" id="mName" placeholder="Student name">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Phone</div>
+              <input class="input" id="mPhone" placeholder="01xxxxxxxxx">
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div style="flex:1;min-width:220px">
+              <div class="label">Student code (optional)</div>
+              <input class="input" id="mCode" placeholder="School code">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Initial paid % (optional)</div>
+              <input class="input" id="mPaid" type="number" min="0" max="100" placeholder="0">
+            </div>
+          </div>
+          <div class="muted" style="margin-top:10px">Tip: You can leave paid % = 0 and let payments approvals update it.</div>
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mCreate">Create</button>
+        `
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mCreate").onclick = async ()=>{
+        const fullName = ($("#mName").value||"").trim();
+        if(!fullName) return toast("Missing","Name is required.");
+        const phone = ($("#mPhone").value||"").trim();
+        const studentCode = ($("#mCode").value||"").trim();
+        const paidPct = Math.max(0, Math.min(100, Number($("#mPaid").value||0)));
+        const id = `stu_${Math.random().toString(16).slice(2,10)}`;
+        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",id),{
+          fullName, phone, studentCode,
+          paidPct,
+          blocked:false, blockReason:"",
+          sizes:{}, sizesLocked:false,
+          committedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, {merge:true});
+        await addAudit("create_student", {studentId:id});
+        toast("Created","Student added.");
+        closeModal();
+        await refreshAll();
+        showTab("students");
+      };
+    }
+
+    // =========================
+    // 11) Payments approvals
+    // =========================
+    function canApprovePayments(){
+      return (state.me.role==="owner" || state.me.role==="finance" || state.me.role==="ops");
+    }
+
+    async function loadPayments(status="pending"){
+      if(!state.schoolId) return;
+      if(!canApprovePayments()) return toast("Blocked","You don't have permission to approve payments.");
+      let qy;
+      if(status==="all") qy = query(paymentsCol(state.schoolId), orderBy("createdAt","desc"), limit(200));
+      else qy = query(paymentsCol(state.schoolId), where("status","==",status), orderBy("createdAt","desc"), limit(200));
+      const snap = await getDocs(qy);
+      const rows = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderPayments(rows);
+    }
+
+    function renderPayments(rows){
+      const wrap = $("#paymentsWrap");
+      if(!rows.length){
+        wrap.innerHTML = `<div class="muted">No payments in this view.</div>`;
+        return;
+      }
+      wrap.innerHTML = rows.map(p=>{
+        const st = state.students.find(s=>s.id===p.studentId);
+        const name = st?.fullName || p.studentName || p.studentId || "Student";
+        const pct = Number(p.pct||0);
+        const tag = p.status==="approved"
+          ? `<span class="tag"><span class="dot ok"></span><span>Approved</span></span>`
+          : (p.status==="rejected"
+            ? `<span class="tag"><span class="dot danger"></span><span>Rejected</span></span>`
+            : `<span class="tag"><span class="dot warn"></span><span>Pending</span></span>`);
+        const img = p.screenshotUrl ? `<a class="btn small" href="${esc(p.screenshotUrl)}" target="_blank" rel="noopener">View screenshot</a>` : `<span class="muted">No screenshot URL</span>`;
+        const controls = (p.status==="pending")
+          ? `
+            <button class="btn small ok" data-approve="${esc(p.id)}">Approve</button>
+            <button class="btn small danger" data-reject="${esc(p.id)}">Reject</button>
+          `
+          : `<button class="btn small" data-openpay="${esc(p.id)}">Open</button>`;
+        return `
+          <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03);margin-bottom:12px">
+            <div class="headRow">
+              <div>
+                <div class="tag">${tag}</div>
+                <div style="margin-top:10px" class="strong">${esc(name)} — ${Math.round(pct)}%</div>
+                <div class="muted" style="margin-top:6px">Submitted: ${esc(fmtDateTime(p.createdAt))}</div>
+                <div class="muted" style="margin-top:6px">Note: ${esc(p.note || "—")}</div>
+              </div>
+              <div class="row">
+                ${img}
+                ${controls}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      wrap.querySelectorAll("button[data-approve]").forEach(b=> b.addEventListener("click", ()=> approvePayment(b.dataset.approve)));
+      wrap.querySelectorAll("button[data-reject]").forEach(b=> b.addEventListener("click", ()=> rejectPayment(b.dataset.reject)));
+      wrap.querySelectorAll("button[data-openpay]").forEach(b=> b.addEventListener("click", ()=> openPayment(b.dataset.openpay)));
+    }
+
+    async function approvePayment(paymentId){
+      if(!canApprovePayments()) return toast("Blocked","No permission.");
+      const ref = doc(db,"agencies",state.agencyId,"schools",state.schoolId,"payments",paymentId);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return toast("Missing","Payment not found.");
+      const p = snap.data();
+      if(p.status!=="pending") return toast("Already handled","This payment is not pending.");
+
+      openModal({
+        title:"Approve payment",
+        sub:"Confirm approval. This will increase the student's paid % and may unblock them.",
+        bodyHTML: `
+          <div class="label">Approval note (optional)</div>
+          <input class="input" id="mNote" placeholder="e.g. Verified via bank app…">
+          <div class="muted" style="margin-top:10px">Student paid % will be set to max(current, submitted pct).</div>
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn ok" id="mDo">Approve</button>
+        `
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mDo").onclick = async ()=>{
+        const note = ($("#mNote").value||"").trim();
+        const studentId = p.studentId;
+        const stuRef = doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",studentId);
+        const stuSnap = await getDoc(stuRef);
+        const cur = stuSnap.exists() ? stuSnap.data() : {};
+        const newPaid = Math.max(Number(cur.paidPct||0), Number(p.pct||0));
+
+        await updateDoc(ref, {
+          status:"approved",
+          approvedAt: serverTimestamp(),
+          approverUid: state.uid,
+          approverName: state.me?.fullName || state.me?.email || "—",
+          decisionNote: note
+        });
+
+        await setDoc(stuRef, {
+          paidPct: newPaid,
+          // if previously blocked only because of payment, ops can still block manually;
+          // here we remove "auto" blocks if any
+          autoBlocked: false,
+          updatedAt: serverTimestamp()
+        }, {merge:true});
+
+        await addAudit("approve_payment", {paymentId, studentId, pct: p.pct});
+        closeModal();
+        toast("Approved","Payment approved.");
+        await refreshAll();
+        showTab("payments");
+      };
+    }
+
+    async function rejectPayment(paymentId){
+      if(!canApprovePayments()) return toast("Blocked","No permission.");
+      openModal({
+        title:"Reject payment",
+        sub:"This will keep the student blocked until a valid payment is approved.",
+        bodyHTML: `
+          <div class="label">Reason (required)</div>
+          <input class="input" id="mReason" placeholder="e.g. Screenshot unclear / wrong amount / wrong reference…">
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn danger" id="mDo">Reject</button>
+        `
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mDo").onclick = async ()=>{
+        const reason = ($("#mReason").value||"").trim();
+        if(!reason) return toast("Missing","Enter a reason.");
+        const ref = doc(db,"agencies",state.agencyId,"schools",state.schoolId,"payments",paymentId);
+        const snap = await getDoc(ref);
+        if(!snap.exists()) return toast("Missing","Payment not found.");
+        const p = snap.data();
+
+        await updateDoc(ref, {
+          status:"rejected",
+          rejectedAt: serverTimestamp(),
+          approverUid: state.uid,
+          approverName: state.me?.fullName || state.me?.email || "—",
+          decisionNote: reason
+        });
+
+        // keep student blocked (soft)
+        if(p.studentId){
+          await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",p.studentId),
+            {blocked:true, blockReason:"Payment rejected", updatedAt: serverTimestamp()}, {merge:true});
+        }
+
+        await addAudit("reject_payment", {paymentId, studentId:p.studentId||null});
+        closeModal();
+        toast("Rejected","Payment rejected.");
+        await refreshAll();
+        showTab("payments");
+      };
+    }
+
+    async function openPayment(paymentId){
+      const ref = doc(db,"agencies",state.agencyId,"schools",state.schoolId,"payments",paymentId);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return;
+      const p = snap.data();
+      openModal({
+        title:`Payment — ${paymentId}`,
+        sub:`Status: ${p.status || "—"}`,
+        bodyHTML: `
+          <pre class="mono" style="white-space:pre-wrap;margin:0">${esc(JSON.stringify(p, null, 2))}</pre>
+          ${p.screenshotUrl ? `<div class="hr"></div><a class="btn small" href="${esc(p.screenshotUrl)}" target="_blank" rel="noopener">Open screenshot</a>` : ""}
+        `,
+        footHTML:`<button class="btn" id="mClose">Close</button>`
+      });
+      $("#mClose").onclick = closeModal;
+    }
+
+    // =========================
+    // 12) Products
+    // =========================
+    function canEditProducts(){
+      return (state.me.role==="owner" || state.me.role==="product");
+    }
+
+    function renderProducts(){
+      const tbody = $("#productsTable");
+      const rows = (state.products||[]);
+      tbody.innerHTML = rows.map(p=>{
+        const opts = [];
+        if(p.enablePrintedName) opts.push("Printed name");
+        if(p.requirePrintedName) opts.push("Printed name required");
+        if(Array.isArray(p.sizeOptions) && p.sizeOptions.length) opts.push(`Sizes: ${p.sizeOptions.join(", ")}`);
+        return `
+          <tr class="item">
+            <td>
+              <div class="strong">${esc(p.nameEn || p.nameAr || "Product")}</div>
+              <div class="muted">${esc(p.category || "—")}</div>
+              <div class="mono">${esc(p.id)}</div>
+            </td>
+            <td>
+              <div class="muted">EN: ${esc(p.nameEn || "—")}</div>
+              <div class="muted">AR: ${esc(p.nameAr || "—")}</div>
+            </td>
+            <td class="muted">${esc(opts.join(" • ") || "—")}</td>
+            <td class="right">
+              <div class="row" style="justify-content:flex-end">
+                <button class="btn small" data-edit-prod="${esc(p.id)}">Edit</button>
+                <button class="btn small danger" data-del-prod="${esc(p.id)}">Disable</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("") || `<tr><td class="muted" colspan="4">No products yet.</td></tr>`;
+
+      tbody.querySelectorAll("button[data-edit-prod]").forEach(b=> b.addEventListener("click", ()=> openEditProduct(b.dataset.editProd)));
+      tbody.querySelectorAll("button[data-del-prod]").forEach(b=> b.addEventListener("click", ()=> disableProduct(b.dataset.delProd)));
+    }
+
+    function openAddProduct(){
+      if(!canEditProducts()) return toast("Blocked","Only Owner/Product Manager can edit products.");
+      openModal({
+        title:"Add product",
+        sub:"Per-school product. Student portal will show available products and enforce printed-name settings.",
+        bodyHTML: `
+          <div class="row">
+            <div style="flex:1;min-width:220px">
+              <div class="label">Name (English)</div>
+              <input class="input" id="mEn" placeholder="e.g. Blazer">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Name (Arabic)</div>
+              <input class="input" id="mAr" placeholder="مثال: بليزر">
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div style="flex:1;min-width:220px">
+              <div class="label">Category (optional)</div>
+              <input class="input" id="mCat" placeholder="e.g. Boys / Girls / Accessories">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Size options (comma separated)</div>
+              <input class="input" id="mSizes" placeholder="XS,S,M,L,XL">
+            </div>
+          </div>
+          <div class="hr"></div>
+          <label class="tag"><input type="checkbox" id="mPrinted" style="transform:scale(1.1)"> Enable printed name field</label>
+          <label class="tag" style="margin-left:8px"><input type="checkbox" id="mPrintedReq" style="transform:scale(1.1)"> Printed name required</label>
+          <div class="muted" style="margin-top:10px">If required, student must enter the printed name to proceed.</div>
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Create</button>
+        `
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        const nameEn = ($("#mEn").value||"").trim();
+        const nameAr = ($("#mAr").value||"").trim();
+        if(!nameEn && !nameAr) return toast("Missing","Enter at least one name (EN or AR).");
+        const category = ($("#mCat").value||"").trim();
+        const sizeOptions = ($("#mSizes").value||"").split(",").map(x=>x.trim()).filter(Boolean);
+        const enablePrintedName = $("#mPrinted").checked;
+        const requirePrintedName = $("#mPrintedReq").checked;
+        const id = `prod_${Math.random().toString(16).slice(2,10)}`;
+        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",id),{
+          nameEn, nameAr, category,
+          sizeOptions,
+          enablePrintedName,
+          requirePrintedName,
+          active:true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, {merge:true});
+        await addAudit("create_product", {productId:id});
+        toast("Created","Product added.");
+        closeModal();
+        await refreshAll();
+        showTab("products");
+      };
+    }
+
+    function openEditProduct(productId){
+      const p = state.products.find(x=>x.id===productId);
+      if(!p) return;
+      if(!canEditProducts()) return toast("Blocked","Only Owner/Product Manager can edit products.");
+      openModal({
+        title:`Edit product — ${p.nameEn || p.nameAr || productId}`,
+        sub:"Update product fields.",
+        bodyHTML: `
+          <div class="row">
+            <div style="flex:1;min-width:220px">
+              <div class="label">Name (English)</div>
+              <input class="input" id="mEn" value="${esc(p.nameEn||"")}">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Name (Arabic)</div>
+              <input class="input" id="mAr" value="${esc(p.nameAr||"")}">
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div style="flex:1;min-width:220px">
+              <div class="label">Category</div>
+              <input class="input" id="mCat" value="${esc(p.category||"")}">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Size options (comma separated)</div>
+              <input class="input" id="mSizes" value="${esc((p.sizeOptions||[]).join(","))}">
+            </div>
+          </div>
+          <div class="hr"></div>
+          <label class="tag"><input type="checkbox" id="mPrinted" style="transform:scale(1.1)"> Enable printed name field</label>
+          <label class="tag" style="margin-left:8px"><input type="checkbox" id="mPrintedReq" style="transform:scale(1.1)"> Printed name required</label>
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Save</button>
+        `
+      });
+      $("#mPrinted").checked = !!p.enablePrintedName;
+      $("#mPrintedReq").checked = !!p.requirePrintedName;
+
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        const nameEn = ($("#mEn").value||"").trim();
+        const nameAr = ($("#mAr").value||"").trim();
+        const category = ($("#mCat").value||"").trim();
+        const sizeOptions = ($("#mSizes").value||"").split(",").map(x=>x.trim()).filter(Boolean);
+        const enablePrintedName = $("#mPrinted").checked;
+        const requirePrintedName = $("#mPrintedReq").checked;
+        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",productId),{
+          nameEn,nameAr,category,sizeOptions,enablePrintedName,requirePrintedName,
+          updatedAt: serverTimestamp()
+        }, {merge:true});
+        await addAudit("edit_product", {productId});
+        toast("Saved","Product updated.");
+        closeModal();
+        await refreshAll();
+        showTab("products");
+      };
+    }
+
+    async function disableProduct(productId){
+      if(!canEditProducts()) return toast("Blocked","Only Owner/Product Manager can edit products.");
+      openModal({
+        title:"Disable product",
+        sub:"This hides it from student ordering (soft disable).",
+        bodyHTML:`<div class="muted">Product: <span class="mono">${esc(productId)}</span></div>`,
+        footHTML:`<button class="btn" id="mCancel">Cancel</button><button class="btn danger" id="mDo">Disable</button>`
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mDo").onclick = async ()=>{
+        await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"products",productId),{active:false, updatedAt: serverTimestamp()}, {merge:true});
+        await addAudit("disable_product", {productId});
+        closeModal();
+        toast("Updated","Product disabled.");
+        await refreshAll();
+        showTab("products");
+      };
+    }
+
+    // =========================
+    // 13) Warehouse
+    // =========================
+    function canWarehouse(){
+      return (state.me.role==="owner" || state.me.role==="warehouse" || state.me.role==="ops");
+    }
+
+    function warehouseStatus(stu){
+      if(stu.deliveredAt) return "delivered";
+      if(stu.packedAt) return "packed";
+      return "to_pack";
+    }
+
+    function renderWarehouse(){
+      if(!canWarehouse()) return $("#warehouseWrap").innerHTML = `<div class="muted">No permission.</div>`;
+      const f = $("#whFilter").value || "to_pack";
+      const rows = (state.students||[])
+        .filter(stu=> f==="all" ? true : warehouseStatus(stu)===f)
+        .sort((a,b)=> (a.fullName||"").localeCompare(b.fullName||""));
+      const wrap = $("#warehouseWrap");
+      if(!rows.length){
+        wrap.innerHTML = `<div class="muted">No students in this view.</div>`;
+        return;
+      }
+      wrap.innerHTML = rows.map(stu=>{
+        const st = warehouseStatus(stu);
+        const tag = st==="delivered"
+          ? `<span class="tag"><span class="dot ok"></span><span>Delivered</span></span>`
+          : (st==="packed"
+            ? `<span class="tag"><span class="dot warn"></span><span>Packed</span></span>`
+            : `<span class="tag"><span class="dot info"></span><span>To pack</span></span>`);
+        const items = Array.isArray(stu.items) ? stu.items : [];
+        return `
+          <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03);margin-bottom:12px">
+            <div class="headRow">
+              <div>
+                ${tag}
+                <div class="strong" style="margin-top:10px">${esc(stu.fullName || stu.id)}</div>
+                <div class="muted" style="margin-top:6px">${esc(stu.phone || "—")} ${stu.studentCode ? " • "+esc(stu.studentCode):""}</div>
+                <div class="muted" style="margin-top:6px">Items: ${esc(items.length ? items.map(x=>`${x.name||x.productName||"Item"} x${x.qty||1}`).join(" • ") : "—")}</div>
+              </div>
+              <div class="row">
+                ${st!=="packed" && st!=="delivered" ? `<button class="btn small warn" data-pack="${esc(stu.id)}">Mark packed</button>` : ""}
+                ${st!=="delivered" ? `<button class="btn small ok" data-deliver="${esc(stu.id)}">Mark delivered</button>` : ""}
+                <button class="btn small" data-open="${esc(stu.id)}">Open</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      wrap.querySelectorAll("button[data-pack]").forEach(b=> b.addEventListener("click", ()=> markPacked(b.dataset.pack)));
+      wrap.querySelectorAll("button[data-deliver]").forEach(b=> b.addEventListener("click", ()=> markDelivered(b.dataset.deliver)));
+      wrap.querySelectorAll("button[data-open]").forEach(b=> b.addEventListener("click", ()=> openStudentDrawer(b.dataset.open)));
+    }
+
+    async function markPacked(studentId){
+      if(!canWarehouse()) return toast("Blocked","No permission.");
+      await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",studentId),
+        {packedAt: serverTimestamp(), updatedAt: serverTimestamp()}, {merge:true});
+      await addAudit("mark_packed", {studentId});
+      toast("Updated","Marked packed.");
+      await refreshAll();
+      showTab("warehouse");
+    }
+
+    async function markDelivered(studentId){
+      if(!canWarehouse()) return toast("Blocked","No permission.");
+      await setDoc(doc(db,"agencies",state.agencyId,"schools",state.schoolId,"students",studentId),
+        {deliveredAt: serverTimestamp(), updatedAt: serverTimestamp()}, {merge:true});
+      await addAudit("mark_delivered", {studentId});
+      toast("Updated","Marked delivered.");
+      await refreshAll();
+      showTab("warehouse");
+    }
+
+    // =========================
+    // 14) School settings
+    // =========================
+    function canEditSchool(){
+      return (state.me.role==="owner" || state.me.role==="ops");
+    }
+
+    function openSchoolSettings(){
+      if(!state.schoolId) return;
+      if(!canEditSchool()) return toast("Blocked","Only Owner/Ops can edit school settings.");
+      const s = state.school || {};
+      const instCount = Number(s.installmentsCount || 4);
+      const deadlines = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(instCount);
+
+      const tsToInput = (ts)=>{
+        if(!ts) return "";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      };
+
+      openModal({
+        title:`School settings — ${s.name || state.schoolId}`,
+        sub:"Ordering window, size lock, and installment deadlines.",
+        bodyHTML: `
+          <div class="row">
+            <div style="flex:1;min-width:220px">
+              <div class="label">School name</div>
+              <input class="input" id="mName" value="${esc(s.name||"")}">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Ordering window</div>
+              <select class="input" id="mOrd">
+                <option value="true" ${s.orderingOpen!==false?"selected":""}>Open</option>
+                <option value="false" ${s.orderingOpen===false?"selected":""}>Closed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div style="flex:1;min-width:220px">
+              <div class="label">Size edits allowed until</div>
+              <input class="input" id="mSizeUntil" type="date" value="${esc(tsToInput(s.sizeEditsUntil || s.sizeLockDate))}">
+            </div>
+            <div style="flex:1;min-width:220px">
+              <div class="label">Installments count</div>
+              <select class="input" id="mInst">
+                ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===instCount?"selected":""}>${n}</option>`).join("")}
+              </select>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+          <div class="strong">Deadlines</div>
+          <div class="muted" style="margin-top:6px">Min % is auto-calculated (cumulative) from installments count.</div>
+          <div class="hr"></div>
+          <div id="dlWrap" class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"></div>
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Save</button>
+        `
+      });
+
+      function buildDl(){
+        const n = Number($("#mInst").value||4);
+        const step = 100/n;
+        const wrap = $("#dlWrap");
+        wrap.innerHTML = Array.from({length:n}, (_,i)=>{
+          const key = `d${i+1}`;
+          const hit = deadlines.find(x=>x.key===key) || deadlines[i] || {};
+          return `
+            <div class="card" style="box-shadow:none;background:rgba(255,255,255,.03);padding:12px">
+              <div class="strong">${key.toUpperCase()}</div>
+              <div class="muted" style="margin-top:6px">Min ${Math.round(step*(i+1))}%</div>
+              <div class="label" style="margin-top:10px">Due date</div>
+              <input class="input" type="date" id="mDL_${key}" value="${esc(tsToInput(hit.dueAt))}">
+            </div>
+          `;
+        }).join("");
+      }
+      $("#mInst").onchange = buildDl;
+      buildDl();
+
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        const name = ($("#mName").value||"").trim() || s.name || state.schoolId;
+        const orderingOpen = $("#mOrd").value==="true";
+        const sizeUntil = $("#mSizeUntil").value;
+        const inst = Number($("#mInst").value||4);
+        const step = 100/inst;
+        const dls = [];
+        for(let i=1;i<=inst;i++){
+          const key = `d${i}`;
+          const v = ($(`#mDL_${key}`)?.value || "").trim();
+          if(!v) return toast("Missing", `Set due date for ${key.toUpperCase()}.`);
+          dls.push({key, minPct: Math.round(step*i), dueAt: Timestamp.fromDate(new Date(v+"T23:59:59"))});
+        }
+        const patch = {
+          name,
+          orderingOpen,
+          installmentsCount: inst,
+          deadlines: dls,
+          sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+          sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(schoolRef(state.schoolId), patch, {merge:true});
+        await addAudit("edit_school_settings", {installmentsCount:inst});
+        closeModal();
+        toast("Saved","School settings updated.");
+        await refreshAll();
+      };
+    }
+
+    function openExtendDeadline(key){
+      if(!canEditSchool()) return toast("Blocked","Only Owner/Ops can extend deadlines.");
+      openModal({
+        title:`Extend deadline — ${key.toUpperCase()}`,
+        sub:"Updates due date for this deadline only.",
+        bodyHTML: `
+          <div class="label">New due date</div>
+          <input class="input" id="mNewDue" type="date">
+        `,
+        footHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn warn" id="mSave">Update</button>
+        `
+      });
+      $("#mCancel").onclick = closeModal;
+      $("#mSave").onclick = async ()=>{
+        const d = ($("#mNewDue").value||"").trim();
+        if(!d) return toast("Missing","Pick a date.");
+        const s = state.school || {};
+        const deadlines = Array.isArray(s.deadlines) && s.deadlines.length ? s.deadlines : defaultDeadlines(Number(s.installmentsCount||4));
+        const updated = deadlines.map(dd=>{
+          if((dd.key||"")===key) return {...dd, dueAt: Timestamp.fromDate(new Date(d+"T23:59:59"))};
+          return dd;
+        });
+        await setDoc(schoolRef(state.schoolId), {deadlines: updated, updatedAt: serverTimestamp()}, {merge:true});
+        await addAudit("extend_deadline", {key, newDue:d});
+        closeModal();
+        toast("Updated","Deadline extended.");
+        await refreshAll();
+      };
+    }
+
+    // =========================
+    // 15) Audit
+    // =========================
+    async function loadAudit(){
+      if(!state.schoolId) return;
+      const snap = await getDocs(query(auditCol(state.schoolId), orderBy("at","desc"), limit(120)));
+      const rows = snap.docs.map(d=>d.data());
+      $("#auditTable").innerHTML = rows.map(r=>`
+        <tr class="item">
+          <td class="mono">${esc(fmtDateTime(r.at))}</td>
+          <td>${esc(r.actorName || r.actorUid || "—")}</td>
+          <td><span class="tag"><span class="dot info"></span><span>${esc(r.action || "—")}</span></span></td>
+          <td class="muted">${esc(JSON.stringify(r.payload||{}).slice(0,240))}</td>
+        </tr>
+      `).join("") || `<tr><td class="muted" colspan="4">No audit events yet.</td></tr>`;
+    }
+
+    // =========================
+    // 16) Export
+    // =========================
+    function exportCSV(){
+      const rows = (state.students||[]).map(s=>({
+        studentId: s.id,
+        fullName: s.fullName||"",
+        phone: s.phone||"",
+        studentCode: s.studentCode||"",
+        paidPct: Number(s.paidPct||0),
+        blocked: !!s.blocked,
+        sizesLocked: !!s.sizesLocked,
+        ordered: !!s.orderedAt,
+        packed: !!s.packedAt,
+        delivered: !!s.deliveredAt
+      }));
+      const cols = Object.keys(rows[0]||{});
+      const csv = [
+        cols.join(","),
+        ...rows.map(r=> cols.map(k=> `"${String(r[k]??"").replace(/"/g,'""')}"`).join(","))
+      ].join("\n");
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `school_${state.schoolId||"export"}_students.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast("Exported","CSV downloaded.");
+    }
+
+    // =========================
+    // 17) Refresh + wiring
+    // =========================
+    async function refreshAll(){
+      if(!state.schoolId) return;
+      await loadSchool();
+      await loadStudents();
+      await loadProducts();
+      await countPendingPayments();
+
+      // role hint
+      $("#roleHint").textContent = ROLES.find(r=>r.key===state.me?.role)?.name || state.me?.role || "—";
+
+      // dashboard
+      renderDashKPIs();
+      renderRAG();
+      renderTimeline();
+
+      // students + products (depending on current tab, but cheap enough)
+      renderStudents();
+      renderProducts();
+      renderWarehouse();
+    }
+
+    function wireUI(){
+      $("#btnRefresh").addEventListener("click", refreshAll);
+      $("#btnSaveCtx").addEventListener("click", async ()=>{
+        const aid = ($("#setAgencyId").value||"").trim() || state.agencyId;
+        const sid = $("#schoolSelect").value;
+        if(aid !== state.agencyId){
+          localStorage.setItem("SUA_AGENCY_ID", aid);
+          toast("Saved","Agency ID updated. Reloading…");
+          setTimeout(()=>location.reload(), 600);
+          return;
+        }
+        state.schoolId = sid;
+        localStorage.setItem("SUA_SCHOOL_ID", sid);
+        $("#pillSchool").textContent = `school: ${state.schoolId || "—"}`;
+        toast("Saved","School context updated.");
+        await refreshAll();
+      });
+      $("#btnReloadCtx").addEventListener("click", ()=> location.reload());
+
+      $("#btnSaveRAG").addEventListener("click", saveRAG);
+      $("#btnOpenSchoolSettings").addEventListener("click", openSchoolSettings);
+      $("#btnExportCSV").addEventListener("click", exportCSV);
+
+      $("#studentSearch").addEventListener("input", ()=> renderStudents());
+      $("#btnAddStudent").addEventListener("click", addStudent);
+
+      $("#btnAddProduct").addEventListener("click", openAddProduct);
+
+      $("#btnLoadPayments").addEventListener("click", ()=> loadPayments($("#payFilter").value));
+      $("#payFilter").addEventListener("change", ()=> loadPayments($("#payFilter").value));
+
+      $("#btnLoadWarehouse").addEventListener("click", ()=> renderWarehouse());
+      $("#whFilter").addEventListener("change", ()=> renderWarehouse());
+
+      $("#btnLoadAudit").addEventListener("click", loadAudit);
+    }
+
+    function tickClock(){
+      $("#pillNow").textContent = new Date().toLocaleString();
+    }
+    setInterval(tickClock, 1000);
+    tickClock();
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){
+        $("#loginView").classList.remove("hide");
+        $("#appView").classList.add("hide");
+        return;
+      }
+      state.uid = user.uid;
+      await ensureAgencyDoc();
+      state.me = await loadMe(user.uid);
+
+      if(!state.me){
+        toast("No access", "Your staff access isn't configured in agency-admin.");
+        $("#loginView").classList.remove("hide");
+        $("#appView").classList.add("hide");
+        return;
+      }
+
+      if(state.schoolId && !hasSchoolAccess(state.schoolId)){
+        state.schoolId = "";
+        localStorage.removeItem("SUA_SCHOOL_ID");
+      }
+
+      $("#meName").textContent = state.me.fullName || state.me.email || "—";
+      $("#meRole").textContent = (ROLES.find(r=>r.key===state.me.role)?.name || state.me.role || "—");
+
+      $("#loginView").classList.add("hide");
+      $("#appView").classList.remove("hide");
+
+      wireUI();
+      showTab("dash");
+
+      await loadSchoolsForSelector();
+      await refreshAll();
+
+      // if finance/ops, preload pending payments tab count
+      if(canApprovePayments()){
+        await loadPayments("pending");
+      }
+    });
+  </script>
+</body>
+</html>
