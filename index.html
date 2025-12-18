@@ -710,7 +710,7 @@ agencies/{agencyId}/audit/{autoId}
     // =========================
     // 2) Imports
     // =========================
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import {
       getAuth, onAuthStateChanged,
       signInWithEmailAndPassword, sendPasswordResetEmail, signOut,
@@ -729,27 +729,19 @@ agencies/{agencyId}/audit/{autoId}
     // =========================
     // 3) App init
     // =========================
-    const app = initializeApp(firebaseConfig);
+    // Prevent "Firebase App named '[DEFAULT]' already exists" in reload scenarios.
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
-import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    // Secondary app instance (so Owner can create staff logins without logging out)
+    let app2;
+    try { app2 = getApp("secondary"); } catch (e) { app2 = initializeApp(firebaseConfig, "secondary"); }
+    const auth2 = getAuth(app2);
+    const storage2 = getStorage(app2);
 
-let app2;
-try { app2 = getApp("secondary"); }
-catch { app2 = initializeApp(firebaseConfig, "secondary"); }
-
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-const auth2 = getAuth(app2);
-const storage2 = getStorage(app2);
-
-
-    // =========================
+// =========================
     // 4) UI helpers
     // =========================
     const $ = (s)=>document.querySelector(s);
@@ -829,7 +821,8 @@ function openModal({title, sub, bodyHTML, footerHTML}){
       schools:[],
       staff:[],
       alerts:[],
-      trendsChart:null
+      trendsChart:null,
+      _wired:false
     };
 
     // =========================
@@ -2295,9 +2288,8 @@ onAuthStateChanged(auth, async (user)=>{
 
   $("#meName").textContent = state.me.fullName || state.me.email || "—";
   $("#meRole").textContent = (ROLES.find(r=>r.key===state.me.role)?.name || state.me.role || "—");
-
   // wire UI buttons (only once)
-  wireUI();
+  if(!state._wired){ wireUI(); state._wired = true; }
 
   // initial tab + data
   showTab("overview");
@@ -2502,4 +2494,5 @@ const percentSchedule = buildPercentSchedule(instCount);
   </script>
 </body>
 </html>
+
 
