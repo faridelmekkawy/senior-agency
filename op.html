@@ -1982,8 +1982,6 @@ function openSchoolSettings(){
         toast("Saved","School settings updated.");
         await refreshAll();
       };
-    }
-
     function openExtendDeadline(key){
       if(!canEditSchool()) return toast("Blocked","Only Owner/Ops can extend deadlines.");
       openModal({
