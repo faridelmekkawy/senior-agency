@@ -568,7 +568,7 @@
               </select>
               <div class="smallNote" style="margin-top:6px">When ON, the first logged-in user can self-create an Owner staff doc if missing.</div>
             </div>
-          
+          </div>
           <div class="hr"></div>
 
             <div class="formRow">
@@ -733,11 +733,21 @@ agencies/{agencyId}/audit/{autoId}
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
-    // Secondary app instance (so Owner can create staff logins without logging out)
-    const app2 = initializeApp(firebaseConfig, "secondary");
-    const auth2 = getAuth(app2);
-    const storage2 = getStorage(app2);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+let app2;
+try { app2 = getApp("secondary"); }
+catch { app2 = initializeApp(firebaseConfig, "secondary"); }
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+const auth2 = getAuth(app2);
+const storage2 = getStorage(app2);
+
 
     // =========================
     // 4) UI helpers
@@ -1484,7 +1494,47 @@ async function loadMe(uid){
           <button class="btn" id="mClose">Close</button>
         `
       });
+function handleAlertActionForSchool(schoolId, type){
+  const s = state.schools.find(x=>x.id===schoolId);
+  const msg = type==="remindPayments"
+    ? `Reminder: Please complete your required installment payment for ${s?.name||schoolId}. If your payment is pending approval, wait for confirmation.`
+    : `Reminder: Please complete your uniform order for ${s?.name||schoolId}. Ordering is time-sensitive based on the school timeline.`;
 
+  openModal({
+    title:`Send reminder — ${schoolId}`,
+    sub:"Copy the message below and send via WhatsApp / SMS / email.",
+    bodyHTML:`<label class="smallNote">Message</label><textarea class="input" id="mMsg">${esc(msg)}</textarea>`,
+    footerHTML:`<button class="btn" id="mCopy">Copy</button><button class="btn" id="mClose">Close</button>`
+  });
+  $("#mCopy").onclick = async ()=>{ await navigator.clipboard.writeText($("#mMsg").value); toast("Copied","Reminder copied."); };
+  $("#mClose").onclick = closeModal;
+}
+
+function openExtendDeadlineModal(schoolId, key){
+  openModal({
+    title:`Extend deadline — ${schoolId}`,
+    sub:`Choose a new due date for ${key.toUpperCase()}.`,
+    bodyHTML:`<div class="formRow">
+        <div><label class="smallNote">Deadline key</label><input class="input" value="${esc(key)}" disabled/></div>
+        <div><label class="smallNote">New due date</label><input class="input" id="mNewDue" type="date"/></div>
+      </div>`,
+    footerHTML:`<button class="btn" id="mCancel">Cancel</button><button class="btn warn" id="mSave">Update</button>`
+  });
+  $("#mCancel").onclick = closeModal;
+  $("#mSave").onclick = async ()=>{
+    const d = $("#mNewDue").value;
+    if(!d) return toast("Missing","Pick a date.");
+    const dt = new Date(d+"T23:59:59");
+    const s = state.schools.find(x=>x.id===schoolId);
+    const deadlines = Array.isArray(s?.deadlines) ? s.deadlines : defaultDeadlines();
+    const updated = deadlines.map(dd => (dd.key===key ? {...dd, dueAt: Timestamp.fromDate(dt)} : dd));
+    await updateDoc(schoolRef(schoolId), {deadlines: updated, updatedAt: serverTimestamp()});
+    await addAudit("extend_deadline", {schoolId, key, newDue: d});
+    closeModal();
+    toast("Updated", `${key.toUpperCase()} extended.`);
+    await refreshAll();
+  };
+}
       // set initial values
       $("#mOrdOpen").value = String(!!s.orderingOpen);
       const d = s.sizeLockDate?.toDate ? s.sizeLockDate.toDate() : (s.sizeLockDate ? new Date(s.sizeLockDate) : null);
@@ -1515,9 +1565,18 @@ async function loadMe(uid){
         closeModal();
         await refreshAll();
       };
-      $("#mRemindPay").onclick = ()=> handleAlertAction(0, "remindPayments", "", "");
-      $("#mRemindOrd").onclick = ()=> handleAlertAction(0, "remindOrdering", "", "");
-      $("#mExtend").onclick = ()=> handleAlertAction(0, "extendDeadline", "d2", "");
+     $("#mRemindPay").onclick = ()=> {
+  closeModal();
+  handleAlertActionForSchool(schoolId, "remindPayments");
+};
+$("#mRemindOrd").onclick = ()=> {
+  closeModal();
+  handleAlertActionForSchool(schoolId, "remindOrdering");
+};
+$("#mExtend").onclick = ()=> {
+  closeModal();
+  openExtendDeadlineModal(schoolId, "d2"); // or let user pick d1..d6
+};
       $("#mClose").onclick = closeModal;
     }
 
@@ -1810,7 +1869,11 @@ async function loadMe(uid){
           });
         }
 
-        const percentSchedule = Array.from({length:instCount}, ()=> Math.round(100/instCount));
+function buildPercentSchedule(n){
+  const base = Math.floor(100/n);
+  const rem = 100 - base*n;
+  return Array.from({length:n}, (_,i)=> base + (i<rem?1:0));
+}
 
         const payload = {
           name,
@@ -1837,181 +1900,7 @@ async function loadMe(uid){
       };
     }
 
-    function openEditSchool(schoolId){
-      const s = state.schools.find(x=>x.id===schoolId);
-      if(!s) return;
-
-      const existingDeadlines = Array.isArray(s.deadlines) ? s.deadlines : defaultDeadlines();
-      const instCount0 = Number(s.installmentsCount || existingDeadlines.length || 4);
-
-      const tsToInput = (ts)=>{
-        if(!ts) return "";
-        const d = ts.toDate ? ts.toDate() : new Date(ts);
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-      };
-
-      openModal({
-        title:`Edit school — ${esc(s.name || s.id)}`,
-        sub:"Configure installments + deadlines per school. Changes affect student gating + ops dashboards.",
-        bodyHTML: `
-          <div class="formRow">
-            <div>
-              <label class="smallNote">School name</label>
-              <input class="input" id="mSchoolName" value="${esc(s.name || "")}" placeholder="School name"/>
-            </div>
-            <div>
-              <label class="smallNote">School ID</label>
-              <input class="input" id="mSchoolId" value="${esc(s.id)}" disabled/>
-              <div class="smallNote" style="margin-top:6px">ID cannot change.</div>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="formRow3">
-            <div>
-              <label class="smallNote">Installments count</label>
-              <select class="input" id="mInstCount">
-                ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===instCount0?"selected":""}>${n} installments</option>`).join("")}
-              </select>
-            </div>
-            <div>
-              <label class="smallNote">Ordering window</label>
-              <select class="input" id="mOrdOpen">
-                <option value="true" ${s.orderingOpen!==false?"selected":""}>Open</option>
-                <option value="false" ${s.orderingOpen===false?"selected":""}>Closed</option>
-              </select>
-            </div>
-            <div>
-              <label class="smallNote">Size edits allowed until</label>
-              <input class="input" id="mSizeUntil" type="date" value="${tsToInput(s.sizeEditsUntil || s.sizeLockDate)}"/>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="smallNote" style="margin-bottom:8px">Deadlines (due dates) per installment:</div>
-
-          <div class="formRow3">
-            <div class="dl" data-i="1">
-              <label class="smallNote">D1 due (min %)</label>
-              <input class="input" id="mD1" type="date"/>
-              <div class="smallNote" id="mP1">—</div>
-            </div>
-            <div class="dl" data-i="2">
-              <label class="smallNote">D2 due (min %)</label>
-              <input class="input" id="mD2" type="date"/>
-              <div class="smallNote" id="mP2">—</div>
-            </div>
-            <div class="dl" data-i="3">
-              <label class="smallNote">D3 due (min %)</label>
-              <input class="input" id="mD3" type="date"/>
-              <div class="smallNote" id="mP3">—</div>
-            </div>
-          </div>
-          <div class="formRow3" style="margin-top:10px">
-            <div class="dl" data-i="4">
-              <label class="smallNote">D4 due (min %)</label>
-              <input class="input" id="mD4" type="date"/>
-              <div class="smallNote" id="mP4">—</div>
-            </div>
-            <div class="dl" data-i="5">
-              <label class="smallNote">D5 due (min %)</label>
-              <input class="input" id="mD5" type="date"/>
-              <div class="smallNote" id="mP5">—</div>
-            </div>
-            <div class="dl" data-i="6">
-              <label class="smallNote">D6 due (min %)</label>
-              <input class="input" id="mD6" type="date"/>
-              <div class="smallNote" id="mP6">—</div>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <div class="formRow">
-            <div>
-              <label class="smallNote">Active</label>
-              <select class="input" id="mActive">
-                <option value="true" ${s.active!==false?"selected":""}>Active</option>
-                <option value="false" ${s.active===false?"selected":""}>Inactive</option>
-              </select>
-            </div>
-            <div class="smallNote" style="align-self:end">Tip: if school “doesn’t appear”, check agencyId in Settings and ensure your staff has access to that school.</div>
-          </div>
-        `,
-        footerHTML: `
-          <button class="btn" id="mCancel">Cancel</button>
-          <button class="btn primary" id="mSave">Save changes</button>
-        `
-      });
-
-      // fill deadline dates from existing (by key if possible)
-      const dlMap = new Map(existingDeadlines.map(d=>[d.key, d]));
-      for(let i=1;i<=6;i++){
-        const inp = document.getElementById(`mD${i}`);
-        if(!inp) continue;
-        const hit = dlMap.get(`d${i}`) || existingDeadlines[i-1];
-        inp.value = hit?.dueAt ? tsToInput(hit.dueAt) : "";
-      }
-
-      function updateDlUI(){
-        const n = Number($("#mInstCount").value||4);
-        const step = 100 / n;
-        for(let i=1;i<=6;i++){
-          const wrap = document.querySelector(`.dl[data-i="${i}"]`);
-          if(wrap) wrap.style.display = i<=n ? "block" : "none";
-          const p = document.getElementById(`mP${i}`);
-          if(p){
-            const minPct = Math.round(step*i);
-            p.textContent = i<=n ? `min ${minPct}%` : "—";
-          }
-        }
-      }
-      $("#mInstCount").onchange = updateDlUI;
-      updateDlUI();
-
-      $("#mCancel").onclick = closeModal;
-
-      $("#mSave").onclick = async ()=>{
-        try{
-          const name = $("#mSchoolName").value.trim() || s.name || s.id;
-          const instCount = Number($("#mInstCount").value||4);
-          const orderingOpen = $("#mOrdOpen").value==="true";
-          const active = $("#mActive").value==="true";
-          const sizeUntil = $("#mSizeUntil").value;
-
-          const dates = [];
-          for(let i=1;i<=instCount;i++){
-            const v = document.getElementById(`mD${i}`)?.value;
-            if(!v) return toast("Missing", `Set due date for D${i}.`);
-            dates.push(v);
-          }
-
-          const step = 100 / instCount;
-          const deadlines = [];
-          for(let i=1;i<=instCount;i++){
-            deadlines.push({
-              key: `d${i}`,
-              minPct: Math.round(step*i),
-              dueAt: Timestamp.fromDate(new Date(dates[i-1] + "T23:59:59"))
-            });
-          }
-          const percentSchedule = Array.from({length:instCount}, ()=> Math.round(100/instCount));
-
-          const payload = {
-            name,
-            orderingOpen,
-            active,
-            installmentsCount: instCount,
-            percentSchedule,
-            deadlines,
-            sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
-            sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
-            updatedAt: serverTimestamp()
-          };
-
-          // =========================
+       // =========================
 // 14) Settings: save + logo upload
 // =========================
 async function saveAgencySettings(){
@@ -2377,7 +2266,9 @@ function tickClock(){
 setInterval(tickClock, 1000);
 tickClock();
 
+let uiWired = false;
 onAuthStateChanged(auth, async (user)=>{
+  if(!uiWired){ wireUI(); uiWired = true; }
   if(!user){
     loginView.classList.remove("hide");
     appView.classList.add("hide");
@@ -2412,7 +2303,188 @@ onAuthStateChanged(auth, async (user)=>{
   showTab("overview");
   await refreshAll();
 });
+  function openEditSchool(schoolId){
+      const s = state.schools.find(x=>x.id===schoolId);
+      if(!s) return;
 
+      const existingDeadlines = Array.isArray(s.deadlines) ? s.deadlines : defaultDeadlines();
+      const instCount0 = Number(s.installmentsCount || existingDeadlines.length || 4);
+
+      const tsToInput = (ts)=>{
+        if(!ts) return "";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      };
+
+      openModal({
+        title:`Edit school — ${esc(s.name || s.id)}`,
+        sub:"Configure installments + deadlines per school. Changes affect student gating + ops dashboards.",
+        bodyHTML: `
+          <div class="formRow">
+            <div>
+              <label class="smallNote">School name</label>
+              <input class="input" id="mSchoolName" value="${esc(s.name || "")}" placeholder="School name"/>
+            </div>
+            <div>
+              <label class="smallNote">School ID</label>
+              <input class="input" id="mSchoolId" value="${esc(s.id)}" disabled/>
+              <div class="smallNote" style="margin-top:6px">ID cannot change.</div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="formRow3">
+            <div>
+              <label class="smallNote">Installments count</label>
+              <select class="input" id="mInstCount">
+                ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===instCount0?"selected":""}>${n} installments</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label class="smallNote">Ordering window</label>
+              <select class="input" id="mOrdOpen">
+                <option value="true" ${s.orderingOpen!==false?"selected":""}>Open</option>
+                <option value="false" ${s.orderingOpen===false?"selected":""}>Closed</option>
+              </select>
+            </div>
+            <div>
+              <label class="smallNote">Size edits allowed until</label>
+              <input class="input" id="mSizeUntil" type="date" value="${tsToInput(s.sizeEditsUntil || s.sizeLockDate)}"/>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="smallNote" style="margin-bottom:8px">Deadlines (due dates) per installment:</div>
+
+          <div class="formRow3">
+            <div class="dl" data-i="1">
+              <label class="smallNote">D1 due (min %)</label>
+              <input class="input" id="mD1" type="date"/>
+              <div class="smallNote" id="mP1">—</div>
+            </div>
+            <div class="dl" data-i="2">
+              <label class="smallNote">D2 due (min %)</label>
+              <input class="input" id="mD2" type="date"/>
+              <div class="smallNote" id="mP2">—</div>
+            </div>
+            <div class="dl" data-i="3">
+              <label class="smallNote">D3 due (min %)</label>
+              <input class="input" id="mD3" type="date"/>
+              <div class="smallNote" id="mP3">—</div>
+            </div>
+          </div>
+          <div class="formRow3" style="margin-top:10px">
+            <div class="dl" data-i="4">
+              <label class="smallNote">D4 due (min %)</label>
+              <input class="input" id="mD4" type="date"/>
+              <div class="smallNote" id="mP4">—</div>
+            </div>
+            <div class="dl" data-i="5">
+              <label class="smallNote">D5 due (min %)</label>
+              <input class="input" id="mD5" type="date"/>
+              <div class="smallNote" id="mP5">—</div>
+            </div>
+            <div class="dl" data-i="6">
+              <label class="smallNote">D6 due (min %)</label>
+              <input class="input" id="mD6" type="date"/>
+              <div class="smallNote" id="mP6">—</div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="formRow">
+            <div>
+              <label class="smallNote">Active</label>
+              <select class="input" id="mActive">
+                <option value="true" ${s.active!==false?"selected":""}>Active</option>
+                <option value="false" ${s.active===false?"selected":""}>Inactive</option>
+              </select>
+            </div>
+            <div class="smallNote" style="align-self:end">Tip: if school “doesn’t appear”, check agencyId in Settings and ensure your staff has access to that school.</div>
+          </div>
+        `,
+        footerHTML: `
+          <button class="btn" id="mCancel">Cancel</button>
+          <button class="btn primary" id="mSave">Save changes</button>
+        `
+      });
+
+      // fill deadline dates from existing (by key if possible)
+      const dlMap = new Map(existingDeadlines.map(d=>[d.key, d]));
+      for(let i=1;i<=6;i++){
+        const inp = document.getElementById(`mD${i}`);
+        if(!inp) continue;
+        const hit = dlMap.get(`d${i}`) || existingDeadlines[i-1];
+        inp.value = hit?.dueAt ? tsToInput(hit.dueAt) : "";
+      }
+
+      function updateDlUI(){
+        const n = Number($("#mInstCount").value||4);
+        const step = 100 / n;
+        for(let i=1;i<=6;i++){
+          const wrap = document.querySelector(`.dl[data-i="${i}"]`);
+          if(wrap) wrap.style.display = i<=n ? "block" : "none";
+          const p = document.getElementById(`mP${i}`);
+          if(p){
+            const minPct = Math.round(step*i);
+            p.textContent = i<=n ? `min ${minPct}%` : "—";
+          }
+        }
+      }
+      $("#mInstCount").onchange = updateDlUI;
+      updateDlUI();
+
+      $("#mCancel").onclick = closeModal;
+
+      $("#mSave").onclick = async ()=>{
+        try{
+          const name = $("#mSchoolName").value.trim() || s.name || s.id;
+          const instCount = Number($("#mInstCount").value||4);
+          const orderingOpen = $("#mOrdOpen").value==="true";
+          const active = $("#mActive").value==="true";
+          const sizeUntil = $("#mSizeUntil").value;
+
+          const dates = [];
+          for(let i=1;i<=instCount;i++){
+            const v = document.getElementById(`mD${i}`)?.value;
+            if(!v) return toast("Missing", `Set due date for D${i}.`);
+            dates.push(v);
+          }
+
+          const step = 100 / instCount;
+          const deadlines = [];
+          for(let i=1;i<=instCount;i++){
+            deadlines.push({
+              key: `d${i}`,
+              minPct: Math.round(step*i),
+              dueAt: Timestamp.fromDate(new Date(dates[i-1] + "T23:59:59"))
+            });
+          }
+function buildPercentSchedule(n){
+  const base = Math.floor(100/n);
+  const rem = 100 - base*n;
+  return Array.from({length:n}, (_,i)=> base + (i<rem?1:0));
+}
+
+// ...
+const percentSchedule = buildPercentSchedule(instCount);
+
+          const payload = {
+            name,
+            orderingOpen,
+            active,
+            installmentsCount: instCount,
+            percentSchedule,
+            deadlines,
+            sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+            sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
+            updatedAt: serverTimestamp()
+          };
+
+     
 // call it once after login
 // (we'll call it inside onAuthStateChanged after app view is shown)
 
