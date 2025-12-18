@@ -571,19 +571,17 @@
           
           <div class="hr"></div>
 
-          <div class="formRow">
-            <div>
-              <label class="smallNote">Agency logo (used everywhere)</label>
-              <input class="input" id="logoFile" type="file" accept="image/*"/>
-              <div class="smallNote" style="margin-top:6px">Current: <span id="logoHint">—</span></div>
-            </div>
-            <div style="display:flex;align-items:flex-end;justify-content:flex-end;gap:10px">
-              <button class="btn" id="btnUploadLogo">Upload logo</button>
-              <button class="btn danger" id="btnClearLogo">Clear logo</button>
-            </div>
-          </div>
+            <div class="formRow">
+  <div>
+    <label class="smallNote">Agency logo (used everywhere)</label>
+    <input class="input" id="logoFile" type="file" accept="image/*"/>
+    <div class="smallNote" style="margin-top:6px">Current: <span id="logoHint">—</span></div>
+  </div>
+  <div style="display:flex;align-items:flex-end;justify-content:flex-end;gap:10px">
+    <button class="btn" id="btnUploadLogo">Upload logo</button>
+    <button class="btn danger" id="btnClearLogo">Clear logo</button>
+  </div>
 </div>
-
           <div class="formActions">
             <button class="btn primary" id="btnSaveAgencySettings">Save settings</button>
           </div>
@@ -927,8 +925,10 @@ function openModal({title, sub, bodyHTML, footerHTML}){
       applyLogo(state.agency?.logoUrl || "");
       // show logo status in settings
       const logoHint = document.getElementById("logoHint");
-      if(logoHint) logoHint.textContent = state.agency?.logoUrl ? "Logo set" : "No logo yet";
-    }async function loadMe(uid){
+     if(logoHint) logoHint.textContent = state.agency?.logoUrl ? "Logo set" : "No logo yet";
+}
+
+async function loadMe(uid){
       const ref = staffRef(uid);
       const snap = await getDoc(ref);
 
@@ -2010,6 +2010,411 @@ function openModal({title, sub, bodyHTML, footerHTML}){
             sizeLockDate: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
             updatedAt: serverTimestamp()
           };
+
+          // =========================
+// 14) Settings: save + logo upload
+// =========================
+async function saveAgencySettings(){
+  try{
+    const newAgencyId = ($("#setAgencyId")?.value || "").trim() || state.agencyId;
+    const name = ($("#setAgencyName")?.value || "").trim() || "Senior Uniform Agency";
+    const bootstrapOwner = ($("#setBootstrap")?.value || "off") === "on";
+
+    // If agencyId changed, persist locally and reload page (because refs depend on it)
+    if(newAgencyId !== state.agencyId){
+      localStorage.setItem("SUA_AGENCY_ID", newAgencyId);
+      toast("Saved", "Agency ID updated. Reloading…");
+      setTimeout(()=>location.reload(), 600);
+      return;
+    }
+
+    await setDoc(agencyRef(), { name, bootstrapOwner, updatedAt: serverTimestamp() }, {merge:true});
+    toast("Saved", "Agency settings saved.");
+    await ensureAgencyDoc();
+  }catch(e){
+    toast("Error", e?.message || "Could not save settings.");
+  }
+}
+
+async function uploadAgencyLogo(){
+  const file = $("#logoFile")?.files?.[0];
+  if(!file) return toast("Missing", "Choose an image first.");
+
+  try{
+    const path = `agencies/${state.agencyId}/branding/logo_${Date.now()}_${file.name.replace(/[^a-z0-9_.-]/gi,"_")}`;
+    const r = sRef(storage, path);
+    await uploadBytes(r, file);
+    const url = await getDownloadURL(r);
+
+    await setDoc(agencyRef(), { logoUrl:url, updatedAt: serverTimestamp() }, {merge:true});
+    await addAudit("upload_agency_logo", {path});
+    toast("Uploaded", "Agency logo updated.");
+    await ensureAgencyDoc();
+  }catch(e){
+    toast("Error", e?.message || "Logo upload failed.");
+  }
+}
+
+async function clearAgencyLogo(){
+  try{
+    await setDoc(agencyRef(), { logoUrl:"", updatedAt: serverTimestamp() }, {merge:true});
+    await addAudit("clear_agency_logo", {});
+    toast("Cleared", "Agency logo removed.");
+    await ensureAgencyDoc();
+  }catch(e){
+    toast("Error", e?.message || "Could not clear logo.");
+  }
+}
+
+// =========================
+// 15) Staff: Invite/Add + Edit + Enable/Disable
+// =========================
+function openInviteStaff(){
+  openModal({
+    title:"Invite / Add staff",
+    sub:"Creates a Firebase Auth user (without logging you out) and writes the staff doc with role + school access.",
+    bodyHTML: `
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Full name</label>
+          <input class="input" id="mStaffName" placeholder="e.g. Mariam Ahmed"/>
+        </div>
+        <div>
+          <label class="smallNote">Email</label>
+          <input class="input" id="mStaffEmail" placeholder="name@agency.com"/>
+        </div>
+      </div>
+      <div class="formRow" style="margin-top:10px">
+        <div>
+          <label class="smallNote">Temp password</label>
+          <input class="input" id="mStaffPass" placeholder="Set a temporary password"/>
+          <div class="smallNote" style="margin-top:6px">They can reset later via “Forgot Password”.</div>
+        </div>
+        <div>
+          <label class="smallNote">Role</label>
+          <select class="input" id="mStaffRole">
+            ${ROLES.map(r=>`<option value="${r.key}">${r.name}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <label class="smallNote">School access</label>
+      <div class="smallNote" style="margin:6px 0 10px">
+        Owners can be set to <b>All schools</b>. Other roles should be assigned to specific schools.
+      </div>
+
+      <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+          <label class="badge"><input type="checkbox" id="mAllSchools" style="transform:scale(1.1); margin-right:8px"> <b>All schools</b></label>
+          <span class="smallNote">If not all, pick specific schools below</span>
+        </div>
+        <div class="hr"></div>
+        <div id="mSchoolChecks" class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px"></div>
+      </div>
+    `,
+    footerHTML: `
+      <button class="btn" id="mCancel">Cancel</button>
+      <button class="btn primary" id="mCreate">Create staff</button>
+    `
+  });
+
+  // build school checkbox list (from all schools in DB, not just assigned ones)
+  const wrap = $("#mSchoolChecks");
+  wrap.innerHTML = (state.schools||[]).map(s=>`
+    <label class="tag" style="justify-content:flex-start; gap:10px">
+      <input type="checkbox" class="mSchoolPick" value="${esc(s.id)}" style="transform:scale(1.1)">
+      <span>${esc(s.name||s.id)}</span>
+    </label>
+  `).join("");
+
+  $("#mCancel").onclick = closeModal;
+
+  $("#mAllSchools").onchange = ()=>{
+    const on = $("#mAllSchools").checked;
+    document.querySelectorAll(".mSchoolPick").forEach(ch=>{
+      ch.disabled = on;
+      if(on) ch.checked = false;
+    });
+  };
+
+  $("#mCreate").onclick = async ()=>{
+    const fullName = ($("#mStaffName").value||"").trim();
+    const email = ($("#mStaffEmail").value||"").trim();
+    const pass = ($("#mStaffPass").value||"").trim();
+    const role = $("#mStaffRole").value;
+
+    if(!fullName || !email || !pass) return toast("Missing", "Name + email + password required.");
+
+    const allSchools = $("#mAllSchools").checked;
+    let schools = [];
+    if(allSchools) schools = ["*"];
+    else{
+      schools = Array.from(document.querySelectorAll(".mSchoolPick"))
+        .filter(x=>x.checked)
+        .map(x=>x.value);
+      if(!schools.length) return toast("Missing", "Select at least one school (or choose All schools).");
+    }
+
+    try{
+      // Create auth user without logging current admin out:
+      const cred = await createUserWithEmailAndPassword(auth2, email, pass);
+      await updateProfile(cred.user, {displayName: fullName});
+
+      // Write staff doc
+      await setDoc(staffRef(cred.user.uid), {
+        fullName,
+        email,
+        role,
+        schools,
+        active:true,
+        createdAt: serverTimestamp()
+      }, {merge:true});
+
+      await addAudit("create_staff", {uid:cred.user.uid, email, role, schools});
+      toast("Created", "Staff user created.");
+      closeModal();
+      await loadStaff();
+    }catch(e){
+      toast("Error", e?.message || "Could not create staff.");
+    }
+  };
+}
+
+function openEditStaff(uid){
+  const st = state.staff.find(x=>x.id===uid);
+  if(!st) return;
+
+  openModal({
+    title:`Edit staff — ${st.fullName || st.email || uid}`,
+    sub:"Change role and school access.",
+    bodyHTML: `
+      <div class="formRow">
+        <div>
+          <label class="smallNote">Full name</label>
+          <input class="input" id="mEName" value="${esc(st.fullName||"")}"/>
+        </div>
+        <div>
+          <label class="smallNote">Role</label>
+          <select class="input" id="mERole">
+            ${ROLES.map(r=>`<option value="${r.key}" ${r.key===st.role?"selected":""}>${r.name}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <label class="smallNote">School access</label>
+      <div class="card" style="box-shadow:none; background:rgba(255,255,255,.03)">
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+          <label class="badge"><input type="checkbox" id="mEAll" style="transform:scale(1.1); margin-right:8px"> <b>All schools</b></label>
+          <span class="smallNote">If not all, pick specific schools below</span>
+        </div>
+        <div class="hr"></div>
+        <div id="mESchools" class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px"></div>
+      </div>
+    `,
+    footerHTML: `
+      <button class="btn" id="mCancel">Cancel</button>
+      <button class="btn primary" id="mSave">Save</button>
+    `
+  });
+
+  const all = (st.schools||[]).includes("*");
+  $("#mEAll").checked = all;
+
+  const wrap = $("#mESchools");
+  wrap.innerHTML = (state.schools||[]).map(s=>`
+    <label class="tag" style="justify-content:flex-start; gap:10px">
+      <input type="checkbox" class="mESchoolPick" value="${esc(s.id)}" style="transform:scale(1.1)">
+      <span>${esc(s.name||s.id)}</span>
+    </label>
+  `).join("");
+
+  const setDisabled = (on)=>{
+    document.querySelectorAll(".mESchoolPick").forEach(ch=>{
+      ch.disabled = on;
+      if(on) ch.checked = false;
+    });
+  };
+  setDisabled(all);
+
+  if(!all){
+    const set = new Set(st.schools||[]);
+    document.querySelectorAll(".mESchoolPick").forEach(ch=>{
+      if(set.has(ch.value)) ch.checked = true;
+    });
+  }
+
+  $("#mEAll").onchange = ()=> setDisabled($("#mEAll").checked);
+
+  $("#mCancel").onclick = closeModal;
+
+  $("#mSave").onclick = async ()=>{
+    const fullName = ($("#mEName").value||"").trim() || st.fullName || st.email || uid;
+    const role = $("#mERole").value;
+    const all2 = $("#mEAll").checked;
+    let schools = [];
+    if(all2) schools = ["*"];
+    else{
+      schools = Array.from(document.querySelectorAll(".mESchoolPick"))
+        .filter(x=>x.checked)
+        .map(x=>x.value);
+      if(!schools.length) return toast("Missing", "Select at least one school (or All schools).");
+    }
+
+    try{
+      await setDoc(staffRef(uid), {fullName, role, schools, updatedAt: serverTimestamp()}, {merge:true});
+      await addAudit("edit_staff", {uid, role, schools});
+      toast("Saved", "Staff updated.");
+      closeModal();
+      await loadStaff();
+    }catch(e){
+      toast("Error", e?.message || "Could not update staff.");
+    }
+  };
+}
+
+async function toggleStaffActive(uid){
+  const st = state.staff.find(x=>x.id===uid);
+  if(!st) return;
+
+  const active = st.active !== false;
+  try{
+    await setDoc(staffRef(uid), {active: !active, updatedAt: serverTimestamp()}, {merge:true});
+    await addAudit("toggle_staff_active", {uid, active: !active});
+    toast("Updated", `Staff ${!active ? "enabled" : "disabled"}.`);
+    await loadStaff();
+  }catch(e){
+    toast("Error", e?.message || "Could not toggle staff.");
+  }
+}
+
+// =========================
+// 16) Audit
+// =========================
+async function loadAudit(){
+  try{
+    const snap = await getDocs(query(auditCol(), orderBy("at","desc"), limit(80)));
+    const rows = snap.docs.map(d=>d.data());
+    $("#auditTable").innerHTML = rows.map(r=>`
+      <tr class="row">
+        <td class="mono">${esc(fmtDateTime(r.at))}</td>
+        <td>${esc(r.actorName || r.actorUid || "—")}</td>
+        <td><span class="badge"><b>${esc(r.action || "—")}</b></span></td>
+        <td class="muted">${esc(JSON.stringify(r.payload || {}).slice(0,220))}</td>
+      </tr>
+    `).join("") || `<tr><td class="muted" colspan="4">No audit events yet.</td></tr>`;
+  }catch(e){
+    toast("Error", e?.message || "Could not load audit.");
+  }
+}
+
+// =========================
+// 17) Snapshots demo tools
+// =========================
+async function seedDemoSnapshots(){
+  try{
+    const base = new Date();
+    for(let i=13;i>=0;i--){
+      const d = new Date(base.getTime() - i*24*3600*1000);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      // simple random-ish demo
+      const commitmentPct = Math.min(100, 35 + (13-i)*3);
+      const paidPct = Math.min(100, 20 + (13-i)*4);
+      const orderedPct = Math.min(100, 10 + (13-i)*5);
+      const lockedPct = Math.min(100, 5 + (13-i)*4);
+      await saveCrossSnapshot(key, {commitmentPct, paidPct, orderedPct, lockedPct});
+    }
+    toast("Done", "Seeded demo snapshots.");
+    await renderTrendsChart();
+  }catch(e){
+    toast("Error", e?.message || "Could not seed snapshots.");
+  }
+}
+
+async function clearAllSnapshots(){
+  toast("Note", "Snapshots delete is disabled in HTML-only mode. (We can add a safe delete tool if needed.)");
+}
+// =========================
+// 13) Wire up buttons (Handlers)
+// =========================
+function wireUI(){
+  // refresh
+  $("#btnRefresh")?.addEventListener("click", refreshAll);
+
+  // create school
+  $("#btnOpenCreateSchool")?.addEventListener("click", openCreateSchool);
+  $("#btnOpenCreateSchool2")?.addEventListener("click", openCreateSchool);
+
+  // staff
+  $("#btnOpenInviteStaff")?.addEventListener("click", openInviteStaff);
+
+  // alerts
+  $("#btnRecomputeAlerts")?.addEventListener("click", async ()=>{
+    await refreshAll(); // recompute comes from refreshAll buildAlerts()
+  });
+
+  // settings
+  $("#btnSaveAgencySettings")?.addEventListener("click", saveAgencySettings);
+  $("#btnUploadLogo")?.addEventListener("click", uploadAgencyLogo);
+  $("#btnClearLogo")?.addEventListener("click", clearAgencyLogo);
+
+  // audit
+  $("#btnLoadAudit")?.addEventListener("click", loadAudit);
+
+  // snapshots demo tools
+  $("#btnSeedSnapshots")?.addEventListener("click", seedDemoSnapshots);
+  $("#btnClearSnapshots")?.addEventListener("click", clearAllSnapshots);
+}
+// =========================
+// 18) Auth boot + init
+// =========================
+function tickClock(){
+  $("#pillNow").textContent = new Date().toLocaleString();
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){
+    loginView.classList.remove("hide");
+    appView.classList.add("hide");
+    return;
+  }
+
+  state.uid = user.uid;
+
+  // Load agency + me
+  await ensureAgencyDoc();
+  state.me = await loadMe(user.uid);
+
+  if(!state.me){
+    toast("No access", "Your staff access is not configured. Ask Owner to add you in Staff & Permissions.");
+    // keep them logged in but show login view so they don't see empty dashboard
+    loginView.classList.remove("hide");
+    appView.classList.add("hide");
+    return;
+  }
+
+  // show app
+  loginView.classList.add("hide");
+  appView.classList.remove("hide");
+
+  $("#meName").textContent = state.me.fullName || state.me.email || "—";
+  $("#meRole").textContent = (ROLES.find(r=>r.key===state.me.role)?.name || state.me.role || "—");
+
+  // wire UI buttons (only once)
+  wireUI();
+
+  // initial tab + data
+  showTab("overview");
+  await refreshAll();
+});
+
+// call it once after login
+// (we'll call it inside onAuthStateChanged after app view is shown)
 
           await setDoc(schoolRef(s.id), payload, {merge:true});
           await addAudit("edit_school", {schoolId:s.id, installmentsCount:instCount});
