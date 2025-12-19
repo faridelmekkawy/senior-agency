@@ -189,7 +189,16 @@
       font-size:12px;
     }
     footer b{color:rgba(248,250,252,.75)}
-  </style>
+  
+    .paylist{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    .payitem{display:flex;gap:10px;align-items:center;border:1px solid var(--border);background:rgba(255,255,255,.05);padding:8px;border-radius:16px}
+    .paythumb{width:48px;height:48px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);flex:0 0 auto}
+    .paythumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .paymeta{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .paymeta b{font-size:12px}
+    .paymeta span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64vw}
+
+</style>
 </head>
 
 <body>
@@ -341,6 +350,9 @@
 
         <div class="hr"></div>
         <div class="muted" id="payHint">—</div>
+        <div class="hr"></div>
+        <div class="muted" style="font-weight:900;margin-bottom:8px">Payment history</div>
+        <div id="payHistory" class="muted">—</div>
       </div>
 
       <div class="card" id="cardTimeline">
@@ -501,6 +513,8 @@
       unsubSchool:null,
       unsubProducts:null,
       unsubLastPayment:null,
+      unsubPaymentsList:null,
+      paymentsList:[],
       lastPayment:null
     };
 
@@ -520,7 +534,8 @@
      * Init / Auto-login
      ************************/
     document.addEventListener("DOMContentLoaded", async ()=>{
-      // Fill auth forms with last used agency/school
+      // Apply invite link params (agency/school) then fill forms
+      applyInviteParams();
       fillAuthDefaults();
 
       // Anonymous auth (keeps Firestore usable even if rules allow public reads)
@@ -561,6 +576,19 @@
       // Auto-login silently (your request)
       await tryAutoLogin(false);
     });
+
+
+    function applyInviteParams(){
+      const sp = new URLSearchParams(location.search);
+      const a = (sp.get("agency") || sp.get("agencyId") || "").trim();
+      const s = (sp.get("school") || sp.get("schoolId") || "").trim();
+      if(a){
+        localStorage.setItem(LS.agency, a);
+      }
+      if(s){
+        localStorage.setItem(LS.school, s);
+      }
+    }
 
     function fillAuthDefaults(){
       const agency = localStorage.getItem(LS.agency) || state.agencyId || "senior_agency";
@@ -637,7 +665,7 @@
     }
 
     function stopSubs(){
-      ["unsubStudent","unsubSchool","unsubProducts","unsubLastPayment"].forEach(k=>{
+      ["unsubStudent","unsubSchool","unsubProducts","unsubLastPayment","unsubPaymentsList"].forEach(k=>{
         if(typeof state[k] === "function"){ try{ state[k](); }catch(e){} }
         state[k] = null;
       });
@@ -673,6 +701,18 @@
       );
       state.unsubLastPayment = onSnapshot(qPay, (snap)=>{
         state.lastPayment = snap.docs.length ? ({ id:snap.docs[0].id, ...snap.docs[0].data() }) : null;
+        renderAll();
+      });
+
+      // payment history list
+      const qPayList = query(
+        colPayments(state.agencyId, state.schoolId),
+        where("studentId","==", state.studentId),
+        orderBy("createdAt","desc"),
+        limit(10)
+      );
+      state.unsubPaymentsList = onSnapshot(qPayList, (snap)=>{
+        state.paymentsList = snap.docs.map(d=>({ id:d.id, ...d.data() }));
         renderAll();
       });
     }
@@ -870,6 +910,8 @@
       // Payment UI targets + hints
       renderPaymentTargets();
 
+      renderPaymentHistory();
+
       // Products
       renderProductsUI();
 
@@ -975,6 +1017,43 @@
 
       $("#payHint").textContent = hint.join(" ");
     }
+    function renderPaymentHistory(){
+      const el = $("#payHistory");
+      if(!el) return;
+      const list = Array.isArray(state.paymentsList) ? state.paymentsList : [];
+      if(!list.length){
+        el.textContent = "No payments submitted yet.";
+        return;
+      }
+      const wrap = document.createElement("div");
+      wrap.className = "paylist";
+      list.forEach(p=>{
+        const stt = (p.status||"pending").toUpperCase();
+        const when = tsToDate(p.createdAt)?.toLocaleString() || "";
+        const div = document.createElement("div");
+        div.className = "payitem";
+        const th = document.createElement("div");
+        th.className = "paythumb";
+        if(p.screenshotUrl){
+          const im = document.createElement("img");
+          im.src = p.screenshotUrl;
+          im.alt = "Payment screenshot";
+          th.appendChild(im);
+          th.style.cursor = "pointer";
+          th.onclick = ()=> window.open(p.screenshotUrl, "_blank");
+        }
+        const meta = document.createElement("div");
+        meta.className = "paymeta";
+        meta.innerHTML = `<b>${Number(p.pct||0)}% • ${esc(stt)}</b>
+                          <span>${esc(when)}${p.reason?(" • "+esc(p.reason)):""}</span>`;
+        div.appendChild(th);
+        div.appendChild(meta);
+        wrap.appendChild(div);
+      });
+      el.innerHTML = "";
+      el.appendChild(wrap);
+    }
+
 
     function productDisplayName(p){
       return p?.name || p?.nameEn || p?.nameAr || "Product";
@@ -989,7 +1068,8 @@
       const sizeUntil = tsToDate(s.sizeEditsUntil || s.sizeLockDate);
       const now = new Date();
       const sizesLocked = !!state.student?.sizesLocked;
-      const allowEdits = !sizesLocked && (!sizeUntil || now <= sizeUntil);
+      const override = !!state.student?.sizesOverride;
+      const allowEdits = !sizesLocked && (override || !sizeUntil || now <= sizeUntil);
 
       // buttons enablement
       $("#btnSaveDraft").disabled = !allowEdits;
@@ -1110,7 +1190,7 @@
       const orderingOpen = (school.orderingOpen !== false);
 
       const sizeUntil = tsToDate(school.sizeEditsUntil || school.sizeLockDate);
-      const sizesLocked = !!st.sizesLocked || (sizeUntil ? (now > sizeUntil) : false);
+      const sizesLocked = !!st.sizesLocked || (!st.sizesOverride && (sizeUntil ? (now > sizeUntil) : false));
       const allowEdits = !sizesLocked;
 
       const hasOrder = !!st.orderedAt;
