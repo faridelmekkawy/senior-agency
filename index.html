@@ -774,7 +774,8 @@ const storage2 = getStorage(app2);
       setTimeout(()=>{ el.remove(); }, 3800);
     }
     function esc(s){
-      return String(s ?? "").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }
+      return String(s ?? "").replace(/[&<>\"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+    }
     function buildInviteLink(file, agencyId, schoolId){
       const base = location.href.split("?")[0];
       const dir = base.substring(0, base.lastIndexOf("/") + 1);
@@ -784,9 +785,6 @@ const storage2 = getStorage(app2);
       try{ await navigator.clipboard.writeText(txt); toast("Copied","Link copied."); }
       catch(e){ prompt("Copy link:", txt); }
     }
-[c]));
-    }
-    
     function applyLogo(url){
       const logos = Array.from(document.querySelectorAll(".logo"));
       logos.forEach(el=>{
@@ -2542,4 +2540,5 @@ const percentSchedule = buildPercentSchedule(instCount);
   </script>
 </body>
 </html>
+
 
