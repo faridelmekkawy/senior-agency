@@ -537,9 +537,6 @@ import {
       await uploadBytes(r, file);
       return await getDownloadURL(r);
     }
-
-
-
     // =========================
     // 3) App init
     // =========================
@@ -553,7 +550,7 @@ import {
     // =========================
     const $ = (s)=>document.querySelector(s);
     const $$ = (s)=>Array.from(document.querySelectorAll(s));
-    const esc = (s)=> String(s ?? "").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+    const esc = (s)=> String(s ?? "").replace(/[&<>\"']/g, (c)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
     const fmtPct = (n)=> (isFinite(n) ? `${Math.round(n)}%` : "—");
     const fmtDate = (ts)=>{
       if(!ts) return "—";
@@ -2016,7 +2013,6 @@ function openSchoolSettings(){
         toast("Saved","School settings updated.");
         await refreshAll();
       };
-    }
 
     function openExtendDeadline(key){
       if(!canEditSchool()) return toast("Blocked","Only Owner/Ops can extend deadlines.");
@@ -2206,3 +2202,5 @@ function openSchoolSettings(){
   </script>
 </body>
 </html>
+
+
