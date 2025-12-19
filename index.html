@@ -710,7 +710,7 @@ agencies/{agencyId}/audit/{autoId}
     // =========================
     // 2) Imports
     // =========================
-    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import {
       getAuth, onAuthStateChanged,
       signInWithEmailAndPassword, sendPasswordResetEmail, signOut,
@@ -725,23 +725,23 @@ agencies/{agencyId}/audit/{autoId}
     import {
       getStorage, ref as sRef, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
-
     // =========================
     // 3) App init
     // =========================
-    // Prevent "Firebase App named '[DEFAULT]' already exists" in reload scenarios.
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-    // Secondary app instance (so Owner can create staff logins without logging out)
-    let app2;
-    try { app2 = getApp("secondary"); } catch (e) { app2 = initializeApp(firebaseConfig, "secondary"); }
-    const auth2 = getAuth(app2);
-    const storage2 = getStorage(app2);
+let app2;
+try { app2 = getApp("secondary"); }
+catch { app2 = initializeApp(firebaseConfig, "secondary"); }
 
-// =========================
+const auth2 = getAuth(app2);
+const storage2 = getStorage(app2);
+
+
+    // =========================
     // 4) UI helpers
     // =========================
     const $ = (s)=>document.querySelector(s);
@@ -774,7 +774,17 @@ agencies/{agencyId}/audit/{autoId}
       setTimeout(()=>{ el.remove(); }, 3800);
     }
     function esc(s){
-      return String(s ?? "").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+      return String(s ?? "").replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }
+    function buildInviteLink(file, agencyId, schoolId){
+      const base = location.href.split("?")[0];
+      const dir = base.substring(0, base.lastIndexOf("/") + 1);
+      return `${dir}${file}?agency=${encodeURIComponent(agencyId)}&school=${encodeURIComponent(schoolId)}`;
+    }
+    async function copyText(txt){
+      try{ await navigator.clipboard.writeText(txt); toast("Copied","Link copied."); }
+      catch(e){ prompt("Copy link:", txt); }
+    }
+[c]));
     }
     
     function applyLogo(url){
@@ -821,8 +831,7 @@ function openModal({title, sub, bodyHTML, footerHTML}){
       schools:[],
       staff:[],
       alerts:[],
-      trendsChart:null,
-      _wired:false
+      trendsChart:null
     };
 
     // =========================
@@ -1621,6 +1630,8 @@ $("#mExtend").onclick = ()=> {
             <div class="actions">
               <button class="btn small" data-open-school="${esc(s.id)}">Open</button>
               <button class="btn small primary" data-quick-open="${esc(s.id)}">Ordering ${s.orderingOpen ? "✓":"→"}</button>
+              <button class="btn small" data-copy-student="${esc(s.id)}">Copy Student Link</button>
+              <button class="btn small" data-copy-ops="${esc(s.id)}">Copy Ops Link</button>
             </div>
           </td>
         </tr>
@@ -1634,6 +1645,17 @@ $("#mExtend").onclick = ()=> {
         const desired = !s.orderingOpen;
         await updateDoc(schoolRef(sid), {orderingOpen: desired, updatedAt: serverTimestamp()});
         await addAudit("toggle_ordering", {schoolId:sid, orderingOpen: desired});
+      $$("button[data-copy-student]").forEach(b=> b.addEventListener("click", async ()=>{
+        const sid = b.dataset.copyStudent;
+        const url = buildInviteLink("student.ux.v3.html", state.agencyId, sid);
+        await copyText(url);
+      }));
+      $$("button[data-copy-ops]").forEach(b=> b.addEventListener("click", async ()=>{
+        const sid = b.dataset.copyOps;
+        const url = buildInviteLink("school-ops.ux.v5.html", state.agencyId, sid);
+        await copyText(url);
+      }));
+
         toast("Updated", `Ordering ${desired?"opened":"closed"}.`);
         await refreshAll();
       }));
@@ -1745,6 +1767,21 @@ $("#mExtend").onclick = ()=> {
               </select>
               <div class="smallNote" style="margin-top:6px">Min % schedule auto-calculates (cumulative): 100% ÷ count.</div>
             </div>
+
+            <div>
+              <label class="smallNote">Pricing mode</label>
+              <select class="input" id="mPricingMode">
+                <option value="fixed" selected>Fixed package (per student)</option>
+                <option value="itemized">Itemized (sum of products)</option>
+              </select>
+              <div class="smallNote" style="margin-top:6px">Fixed package uses the amount below. Itemized uses product prices.</div>
+            </div>
+            <div>
+              <label class="smallNote">Package total (EGP)</label>
+              <input class="input" id="mPackagePrice" type="number" min="0" step="1" placeholder="e.g. 1500">
+              <div class="smallNote" style="margin-top:6px">Used for KPI totals (EGP) and payment value calculations.</div>
+            </div>
+
             <div>
               <label class="smallNote">Size edits allowed until</label>
               <input class="input" id="mSizeUntil" type="date"/>
@@ -1868,12 +1905,18 @@ function buildPercentSchedule(n){
   return Array.from({length:n}, (_,i)=> base + (i<rem?1:0));
 }
 
+        const percentSchedule = buildPercentSchedule(instCount);
+        const pricingMode = ($("#mPricingMode")?.value || "fixed");
+        const packagePriceEGP = Number($("#mPackagePrice")?.value || 0);
+
         const payload = {
           name,
           active:true,
           createdAt: serverTimestamp(),
           orderingOpen,
           installmentsCount: instCount,
+          pricingMode,
+          packagePriceEGP,
           percentSchedule,
           deadlines,
           sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
@@ -2288,8 +2331,9 @@ onAuthStateChanged(auth, async (user)=>{
 
   $("#meName").textContent = state.me.fullName || state.me.email || "—";
   $("#meRole").textContent = (ROLES.find(r=>r.key===state.me.role)?.name || state.me.role || "—");
+
   // wire UI buttons (only once)
-  if(!state._wired){ wireUI(); state._wired = true; }
+  wireUI();
 
   // initial tab + data
   showTab("overview");
@@ -2438,6 +2482,8 @@ onAuthStateChanged(auth, async (user)=>{
           const orderingOpen = $("#mOrdOpen").value==="true";
           const active = $("#mActive").value==="true";
           const sizeUntil = $("#mSizeUntil").value;
+          const pricingMode = ($("#mPricingMode")?.value || (s.pricingMode||"fixed"));
+          const packagePriceEGP = Number($("#mPackagePrice")?.value || 0);
 
           const dates = [];
           for(let i=1;i<=instCount;i++){
@@ -2469,6 +2515,8 @@ const percentSchedule = buildPercentSchedule(instCount);
             orderingOpen,
             active,
             installmentsCount: instCount,
+            pricingMode,
+            packagePriceEGP,
             percentSchedule,
             deadlines,
             sizeEditsUntil: sizeUntil ? Timestamp.fromDate(new Date(sizeUntil+"T23:59:59")) : null,
@@ -2494,5 +2542,4 @@ const percentSchedule = buildPercentSchedule(instCount);
   </script>
 </body>
 </html>
-
 
